@@ -13,16 +13,44 @@ void Renderer::Init()
 // -----------------------------------------------------------
 // Evaluate light transport
 // -----------------------------------------------------------
-float3 Renderer::Trace( Ray& ray )
+float3 Renderer::Trace( Ray& ray, int iterated )
 {
 	scene.FindNearest( ray );
 	if (ray.objIdx == -1) return 0; // or a fancy sky color
 	float3 I = ray.O + ray.t * ray.D;
 	float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
 	float3 albedo = scene.GetAlbedo( ray.objIdx, I );
-	/* visualize normal */ return (N + 1) * 0.5f;
+	/* visualize normal */ // return (N + 1) * 0.5f;
 	/* visualize distance */ // return 0.1f * float3( ray.t, ray.t, ray.t );
-	/* visualize albedo */ // return albedo;
+	/* visualize albedo */
+
+	if (ray.objIdx == 1) 
+	{
+		float3 R = reflect(ray.D, N);
+		return albedo * Trace(Ray(I + (R * 0.00001f), R));
+	}
+	return albedo * DirectIllumination(I, N);
+}
+
+float3 Renderer::DirectIllumination(float3 I, float3 N)
+{
+	float3 lightColor = scene.GetLightColor();
+	float3 lightPos = scene.GetLightPos();
+	float3 L = normalize(lightPos - I);
+	Ray shadowRay = Ray(I + (L * 0.00001f), L);
+
+	scene.quad.Intersect(shadowRay);
+
+	if (scene.IsOccluded(shadowRay)) return float3(0.0f);
+
+	float d = length(lightPos - I);
+	float distF = 1 / (d * d);
+	float angleF = dot(L, N);
+	lightColor.x = lightColor.x * distF * angleF;
+	lightColor.y = lightColor.y * distF * angleF;
+	lightColor.z = lightColor.z * distF * angleF;
+
+	return lightColor * 0.3f;
 }
 
 // -----------------------------------------------------------

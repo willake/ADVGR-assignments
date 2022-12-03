@@ -90,7 +90,8 @@ public:
 	}
 	float3 GetAlbedo( const float3 I ) const
 	{
-		return float3( 0.93f );
+		//return float3( 0.93f );
+		return float3(0.804f, 0.465f, 0.465f);
 	}
 	float3 pos = 0;
 	float r2 = 0, invr = 0;
