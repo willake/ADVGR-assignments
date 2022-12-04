@@ -24,10 +24,10 @@ float3 Renderer::Trace( Ray& ray, int iterated )
 	/* visualize distance */ // return 0.1f * float3( ray.t, ray.t, ray.t );
 	/* visualize albedo */
 
-	if (ray.objIdx == 1) 
+	if (ray.objIdx == 1 && iterated < 4) 
 	{
 		float3 R = reflect(ray.D, N);
-		return albedo * Trace(Ray(I + (R * 0.00001f), R));
+		return albedo * Trace(Ray(I + (R * 0.00001f), R), iterated + 1);
 	}
 	return albedo * DirectIllumination(I, N);
 }
@@ -70,7 +70,7 @@ void Renderer::Tick( float deltaTime )
 		// trace a primary ray for each pixel on the line
 		for (int x = 0; x < SCRWIDTH; x++)
 			accumulator[x + y * SCRWIDTH] =
-				float4( Trace( camera.GetPrimaryRay( x, y ) ), 0 );
+				float4( Trace( camera.GetPrimaryRay( x, y ) , 1), 0 );
 		// translate accumulator contents to rgb32 pixels
 		for (int dest = y * SCRWIDTH, x = 0; x < SCRWIDTH; x++)
 			screen->pixels[dest + x] = 
