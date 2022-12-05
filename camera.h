@@ -67,11 +67,20 @@ public:
 	}
 	void UpdateView()
 	{
-		//mat4 rotation = mat4::LookAt(camPos, camPos + cameraFront, cameraUp);
+		mat4 cameraWorld = mat4::LookAt(camPos, camPos + camFront, camUp);
+
+		float3 offsetTL = float3(-aspect, 1, 2);
+		float3 offsetTR = float3(aspect, 1, 2);
+		float3 offsetBL = float3(-aspect, -1, 2);
 
 		imagePlantTL = TransformPosition(camPos, topLeftTranslation);
 		imagePlaneTR = TransformPosition(camPos, topRightTranslation);
 		imagePlaneBL = TransformPosition(camPos, bottomLeftTranslation);
+
+		//printf("CamPos %.2f %.2f %.2f", camPos.x, camPos.y, camPos.z);
+		//printf("Image Plane TL %.2f %.2f %.2f \n", offsetTL.x, offsetTL.y, offsetTL.z);
+		//printf("Image Plane TR %.2f %.2f %.2f \n", offsetTR.x, offsetTR.y, offsetTR.z);
+		//printf("Image Plane BL %.2f %.2f %.2f \n", offsetBL.x, offsetBL.y, offsetBL.z);
 	}
 	float aspect = (float)SCRWIDTH / (float)SCRHEIGHT;
 	float fov = 60.0f;

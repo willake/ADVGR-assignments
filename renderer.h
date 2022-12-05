@@ -20,13 +20,13 @@ public:
 	void MouseUp( int button ) { if (button == GLFW_MOUSE_BUTTON_RIGHT) isMouseButtonRightDown = false; }
 	void MouseDown(int button) { if (button == GLFW_MOUSE_BUTTON_RIGHT) isMouseButtonRightDown = true; }
 	void MouseMove( int x, int y ) { 
-		offsetMouseX = mousePos.x - lastMouseX;
-		offsetMouseY = lastMouseY - mousePos.y; // reversed since y-coordinates range from bottom to top
-		lastMouseX = mousePos.x;
-		lastMouseY = mousePos.y;
+		mouseOffset.x = mousePos.x - lastMousePos.x;
+		mouseOffset.y = lastMousePos.y - mousePos.y; // reversed since y-coordinates range from bottom to top
+		lastMousePos.x = mousePos.x;
+		lastMousePos.y = mousePos.y;
 
-		offsetMouseX *= sensitivity;
-		offsetMouseY *= sensitivity;
+		mouseOffset.x *= sensitivity;
+		mouseOffset.y *= sensitivity;
 	}
 	void MouseWheel( float y ) {  }
 	void KeyUp( int key ) 
@@ -50,8 +50,8 @@ public:
 	int mouseWheel;
 	int2 mousePos;
 	float sensitivity = 0.1f;
-	float lastMouseX = SCRWIDTH / 2, lastMouseY = SCRHEIGHT / 2;
-	float offsetMouseX, offsetMouseY;
+	int2 lastMousePos = int2(SCRWIDTH / 2, SCRHEIGHT / 2);
+	float2 mouseOffset = float2(0, 0);
 	float4* accumulator;
 	Scene scene;
 	Camera camera;
