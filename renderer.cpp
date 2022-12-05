@@ -24,11 +24,41 @@ float3 Renderer::Trace( Ray& ray, int iterated )
 	/* visualize distance */ // return 0.1f * float3( ray.t, ray.t, ray.t );
 	/* visualize albedo */
 
-	if (ray.objIdx == 1 && iterated < 4) 
+	float reflectivity = scene.GetReflectivity(ray.objIdx, I);
+	float refractivity = scene.GetRefractivity(ray.objIdx, I);
+
+	/* refraction of glass: 1.52 */
+	float n1 = 1;
+	float n2 = 1.52f;
+	float n1DividedByn2 = n1 / n2;
+	float cosThetaI = dot(N, -ray.D);
+	float k = 1 - ((n1DividedByn2  * n1DividedByn2) * (1 - (cosThetaI * cosThetaI)));
+
+	if (refractivity > 0 && iterated < 4 && !(k < 0))
+	{
+		float ThetaI = acos(cosThetaI);
+		float sinThetaI = sin(ThetaI);
+		float3 T = (n1DividedByn2 * ray.D) + (N * ((n1DividedByn2 * cosThetaI) - sqrt(k)));
+		float cosThetaT = sqrt(1 - (n1DividedByn2 * sinThetaI));
+		float3 refracted = albedo * Trace(Ray(I + (T * 0.00001f), T), iterated + 1);
+		float Rs = ((n1 * cosThetaI) - (n2 * cosThetaT)) / ((n1 * cosThetaI) + (n2 * cosThetaT));
+		float Rp = ((n1 * cosThetaI) - (n2 * cosThetaT)) / ((n1 * cosThetaI) + (n2 * cosThetaT));
+		float Fr = ((Rs * Rs) + (Rp * Rp)) / 2;
+		float Ft = 1 - Fr;
+
+		float3 R = reflect(ray.D, N);
+		float3 reflected = albedo * Trace(Ray(I + (R * 0.00001f), R), iterated + 1);
+		// return (refractivity * refracted) + ((1 - refractivity) * albedo * DirectIllumination(I, N));
+		return (Fr * reflected) + (Ft * refracted);
+	}
+
+	if (reflectivity > 0 && iterated < 4) 
 	{
 		float3 R = reflect(ray.D, N);
-		return albedo * Trace(Ray(I + (R * 0.00001f), R), iterated + 1);
+		float3 reflected = albedo * Trace(Ray(I + (R * 0.00001f), R), iterated + 1);
+		return (reflectivity * reflected) + ((1 - reflectivity) * albedo * DirectIllumination(I, N));
 	}
+
 	return albedo * DirectIllumination(I, N);
 }
 
@@ -63,6 +93,19 @@ void Renderer::Tick( float deltaTime )
 	scene.SetTime( animTime += deltaTime * 0.002f );
 	// pixel loop
 	Timer t;
+
+	if (isMouseButtonRightDown)
+	{
+		//camera.Rotate(offsetMouseX, offsetMouseY);
+		//camera.UpdateView();
+	}
+
+	if (verticalInput != 0 || horizontalInput != 0)
+	{
+		camera.Move(verticalInput, horizontalInput);
+		camera.UpdateView();
+	}
+
 	// lines are executed as OpenMP parallel tasks (disabled in DEBUG)
 	#pragma omp parallel for schedule(dynamic)
 	for (int y = 0; y < SCRHEIGHT; y++)
