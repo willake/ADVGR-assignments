@@ -20,10 +20,10 @@ public:
 	void MouseUp( int button ) { if (button == GLFW_MOUSE_BUTTON_RIGHT) isMouseButtonRightDown = false; }
 	void MouseDown(int button) { if (button == GLFW_MOUSE_BUTTON_RIGHT) isMouseButtonRightDown = true; }
 	void MouseMove( int x, int y ) { 
-		mouseOffset.x = mousePos.x - lastMousePos.x;
-		mouseOffset.y = lastMousePos.y - mousePos.y; // reversed since y-coordinates range from bottom to top
-		lastMousePos.x = mousePos.x;
-		lastMousePos.y = mousePos.y;
+		mouseOffset.x = x - lastMousePos.x;
+		mouseOffset.y = lastMousePos.y - y; // reversed since y-coordinates range from bottom to top
+		lastMousePos.x = x;
+		lastMousePos.y = y;
 
 		mouseOffset.x *= sensitivity;
 		mouseOffset.y *= sensitivity;
@@ -48,14 +48,13 @@ public:
 	int verticalInput;
 	int horizontalInput;
 	int mouseWheel;
-	int2 mousePos;
 	float sensitivity = 0.1f;
 	int2 lastMousePos = int2(SCRWIDTH / 2, SCRHEIGHT / 2);
 	int2 mouseOffset = int2(0, 0);
 	float4* accumulator;
 	Scene scene;
 	Camera camera;
-	bool isAntiAlisingOn = true;
+	bool isAntiAlisingOn = false;
 };
 
 } // namespace Tmpl8

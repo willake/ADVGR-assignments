@@ -89,19 +89,22 @@ void Renderer::Tick( float deltaTime )
 {
 	// animation
 	static float animTime = 0;
-	//scene.SetTime( animTime += deltaTime * 0.002f );
+	scene.SetTime( animTime += deltaTime * 0.002f );
 	// pixel loop
 	Timer t;
 
 	if (isMouseButtonRightDown)
 	{
-		//camera.Rotate(offsetMouseX, offsetMouseY);
-		//camera.UpdateView();
+		camera.Rotate(mouseOffset.x, mouseOffset.y);
 	}
 
 	if (verticalInput != 0 || horizontalInput != 0)
 	{
-		camera.Move(verticalInput, horizontalInput);
+		camera.Move(verticalInput, horizontalInput, deltaTime);
+	}
+
+	if (camera.isUpdated)
+	{
 		camera.UpdateView();
 	}
 
