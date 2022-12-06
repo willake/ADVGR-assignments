@@ -26,7 +26,7 @@ public:
 		imagePlaneBL = TransformPosition(camPos, bottomLeftTranslation);
 		yaw = -90.0f;
 		pitch = 0.0f;
-		camFront = float3(0, 0, -1);
+		camFront = float3(0, 0, 1);
 		camUp = float3(0, 1, 0);
 	}
 	Ray GetPrimaryRay( const int x, const int y )
@@ -41,6 +41,19 @@ public:
 		const float3 P = origin + u * width + v * height;
 
 		return Ray( camPos, normalize( P - camPos ) );
+	}
+	Ray GetPrimaryRay(const float x, const float y)
+	{
+		// calculate pixel position on virtual screen plane
+		const float u = x * (1.0f / SCRWIDTH);
+		const float v = y * (1.0f / SCRHEIGHT);
+		const float fovFactor = tan(fov / 2 * PI / 180) * 2;
+		const float3 origin = imagePlantTL * fovFactor;
+		const float3 width = (imagePlaneTR - imagePlantTL) * fovFactor;
+		const float3 height = (imagePlaneBL - imagePlantTL) * fovFactor;
+		const float3 P = origin + u * width + v * height;
+
+		return Ray(camPos, normalize(P - camPos));
 	}
 	void Rotate(const float offsetX, const float offsetY)
 	{
@@ -73,12 +86,17 @@ public:
 		float3 offsetTR = float3(aspect, 1, 2);
 		float3 offsetBL = float3(-aspect, -1, 2);
 
+		float3 tempTL = cameraWorld * mat4::Translate(camPos) * float4(-aspect, 1, 2, 1);
+		//topLeftTranslation = mat4::Translate(offsetTL);
+		//topRightTranslation = mat4::Translate(offsetTR);¡Ú
+		//bottomLeftTranslation = mat4::Translate(offsetBL);
+
 		imagePlantTL = TransformPosition(camPos, topLeftTranslation);
 		imagePlaneTR = TransformPosition(camPos, topRightTranslation);
 		imagePlaneBL = TransformPosition(camPos, bottomLeftTranslation);
 
-		//printf("CamPos %.2f %.2f %.2f", camPos.x, camPos.y, camPos.z);
-		//printf("Image Plane TL %.2f %.2f %.2f \n", offsetTL.x, offsetTL.y, offsetTL.z);
+		printf("CamPos %.2f %.2f %.2f", camPos.x, camPos.y, camPos.z);
+		printf("Image Plane TL %.2f %.2f %.2f \n", tempTL.x, tempTL.y, tempTL.z);
 		//printf("Image Plane TR %.2f %.2f %.2f \n", offsetTR.x, offsetTR.y, offsetTR.z);
 		//printf("Image Plane BL %.2f %.2f %.2f \n", offsetBL.x, offsetBL.y, offsetBL.z);
 	}

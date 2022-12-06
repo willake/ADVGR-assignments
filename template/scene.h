@@ -88,11 +88,6 @@ public:
 	{
 		return (I - this->pos) * invr;
 	}
-	float3 GetAlbedo( const float3 I ) const
-	{
-		//return float3( 0.93f );
-		return float3(0.804f, 0.465f, 0.465f);
-	}
 	float3 pos = 0;
 	float r2 = 0, invr = 0;
 	int objIdx = -1;
@@ -116,30 +111,6 @@ public:
 	float3 GetNormal( const float3 I ) const
 	{
 		return N;
-	}
-	float3 GetAlbedo( const float3 I ) const
-	{
-		if (N.y == 1)
-		{
-			// floor albedo: checkerboard
-			int ix = (int)(I.x * 2 + 96.01f);
-			int iz = (int)(I.z * 2 + 96.01f);
-			// add deliberate aliasing to two tile
-			if (ix == 98 && iz == 98) ix = (int)(I.x * 32.01f), iz = (int)(I.z * 32.01f);
-			if (ix == 94 && iz == 98) ix = (int)(I.x * 64.01f), iz = (int)(I.z * 64.01f);
-			return float3( ((ix + iz) & 1) ? 1 : 0.3f );
-		}
-		else if (N.z == -1)
-		{
-			// back wall: logo
-			static Surface logo( "assets/logo.png" );
-			int ix = (int)((I.x + 4) * (128.0f / 8));
-			int iy = (int)((2 - I.y) * (64.0f / 3));
-			uint p = logo.pixels[(ix & 127) + (iy & 63) * 128];
-			uint3 i3( (p >> 16) & 255, (p >> 8) & 255, p & 255 );
-			return float3( i3 ) * (1.0f / 255.0f);
-		}
-		return float3( 0.93f );
 	}
 	float3 N;
 	float d;
@@ -207,10 +178,6 @@ public:
 		// return normal in world space
 		return TransformVector( N, M );
 	}
-	float3 GetAlbedo( const float3 I ) const
-	{
-		return float3( 1, 1, 1 );
-	}
 	float3 b[2];
 	mat4 M, invM;
 	int objIdx = -1;
@@ -247,15 +214,10 @@ public:
 		// TransformVector( float3( 0, -1, 0 ), T ) 
 		return float3( -T.cell[1], -T.cell[5], -T.cell[9] );
 	}
-	float3 GetAlbedo( const float3 I ) const
-	{
-		return float3( 10 );
-	}
 	float size;
 	mat4 T, invT;
 	int objIdx = -1;
 };
-
 // -----------------------------------------------------------
 // Scene class
 // We intersect this. The query is internally forwarded to the
@@ -272,7 +234,7 @@ public:
 		quad = Quad( 0, 1 );									// 0: light source
 		sphere = Sphere( 1, float3( 0 ), 0.5f );				// 1: bouncing ball
 		sphere2 = Sphere( 2, float3( 0, 2.5f, -3.07f ), 8 );	// 2: rounded corners
-		cube = Cube( 3, float3( 0 ), float3( 1.15f ) );			// 3: cube
+		cube = Cube( 3,  float3( 0 ), float3( 1.15f ) );			// 3: cube
 		plane[0] = Plane( 4, float3( 1, 0, 0 ), 3 );			// 4: left wall
 		plane[1] = Plane( 5, float3( -1, 0, 0 ), 2.99f );		// 5: right wall
 		plane[2] = Plane( 6, float3( 0, 1, 0 ), 1 );			// 6: floor
@@ -280,6 +242,31 @@ public:
 		plane[4] = Plane( 8, float3( 0, 0, 1 ), 3 );			// 8: front wall
 		plane[5] = Plane( 9, float3( 0, 0, -1 ), 3.99f );		// 9: back wall
 		SetTime( 0 );
+
+		lightMaterial = Material();
+		lightMaterial.isLight = true;
+
+		errorMaterial = Material(); // for error
+		errorMaterial.color = float3(240 / 255.f, 98 / 255.f, 146 / 255.f);
+
+		whiteMaterial = Material();
+
+		ballMaterial = Material();
+		ballMaterial.isMirror = true;
+		ballMaterial.color = float3(233 / 255.f, 199 / 255.f, 199 / 255.f);
+
+		cubeMaterial = Material();
+		cubeMaterial.isGlass = true;
+		cubeMaterial.color = float3(103 / 255.f, 137 / 255.f, 131 / 255.f);
+
+		planeMaterial = Material();
+		planeMaterial.color = float3(.8f);
+
+		floorMaterial = FloorMaterial();
+		floorMaterial.isMirror = true;
+		floorMaterial.reflectivity = 0.3f;
+
+		backWallMaterial = BackWallMaterial();
 		// Note: once we have triangle support we should get rid of the class
 		// hierarchy: virtuals reduce performance somewhat.
 	}
@@ -306,6 +293,12 @@ public:
 		float3 corner1 = TransformPosition( float3( -0.5f, 0, -0.5f ), quad.T );
 		float3 corner2 = TransformPosition( float3( 0.5f, 0, 0.5f ), quad.T );
 		return (corner1 + corner2) * 0.5f - float3( 0, 0.01f, 0 );
+	}
+	float3 GetRandomSubLightPos() const
+	{
+		float randX = Rand(1.0f) - 0.5f;
+		float randY = Rand(1.0f) - 0.5f;
+		return TransformPosition(float3(randX, 0, randY), quad.T) - float3(0, 0.01f, 0);
 	}
 	float3 GetLightColor() const
 	{
@@ -356,26 +349,30 @@ public:
 		if (dot( N, wo ) > 0) N = -N; // hit backside / inside
 		return N;
 	}
+	Material GetMaterial( int objIdx ) const
+	{
+		if (objIdx == -1) return errorMaterial; // or perhaps we should just crash
+		if (objIdx == 0) return lightMaterial; // light source
+		if (objIdx == 1) return ballMaterial; // bouncing ball
+		if (objIdx == 2) return whiteMaterial; // corner
+		if (objIdx == 3) return cubeMaterial; // cube
+		if (objIdx == 6) return floorMaterial;
+		if (objIdx == 9) return backWallMaterial;
+		return planeMaterial;
+	}
+
 	float3 GetAlbedo( int objIdx, float3 I ) const
 	{
-		if (objIdx == -1) return float3( 0 ); // or perhaps we should just crash
-		if (objIdx == 0) return quad.GetAlbedo( I );
-		if (objIdx == 1) return sphere.GetAlbedo( I );
-		if (objIdx == 2) return sphere2.GetAlbedo( I );
-		if (objIdx == 3) return cube.GetAlbedo( I );
-		return plane[objIdx - 4].GetAlbedo( I );
+		if (objIdx == -1) return errorMaterial.GetAlbedo(I); // or perhaps we should just crash
+		if (objIdx == 0) return lightMaterial.GetAlbedo(I); // light source
+		if (objIdx == 1) return ballMaterial.GetAlbedo(I); // bouncing ball
+		if (objIdx == 2) return whiteMaterial.GetAlbedo(I); // corner
+		if (objIdx == 3) return cubeMaterial.GetAlbedo(I); // cube
+		if (objIdx == 6) return floorMaterial.GetAlbedo(I);
+		if (objIdx == 9) return backWallMaterial.GetAlbedo(I);
+		return planeMaterial.GetAlbedo(I);
 		// once we have triangle support, we should pass objIdx and the bary-
 		// centric coordinates of the hit, instead of the intersection location.
-	}
-	float GetReflectivity( int objIdx, float3 I ) const
-	{
-		if (objIdx == 1 /* ball */) return 1;
-		if (objIdx == 6 /* floor */) return 0.3f;
-		return 0;
-	}
-	float GetRefractivity( int objIdx, float3 I ) const
-	{
-		return objIdx == 3 ? 1.0f : 0.0f;
 	}
 	__declspec(align(64)) // start a new cacheline here
 	float animTime = 0;
@@ -384,6 +381,14 @@ public:
 	Sphere sphere2;
 	Cube cube;
 	Plane plane[6];
+	Material lightMaterial;
+	Material errorMaterial; // for error
+	Material whiteMaterial;
+	Material ballMaterial;
+	Material cubeMaterial;
+	Material planeMaterial;
+	FloorMaterial floorMaterial;
+	BackWallMaterial backWallMaterial;
 };
 
 }

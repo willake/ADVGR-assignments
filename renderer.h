@@ -51,10 +51,11 @@ public:
 	int2 mousePos;
 	float sensitivity = 0.1f;
 	int2 lastMousePos = int2(SCRWIDTH / 2, SCRHEIGHT / 2);
-	float2 mouseOffset = float2(0, 0);
+	int2 mouseOffset = int2(0, 0);
 	float4* accumulator;
 	Scene scene;
 	Camera camera;
+	bool isAntiAlisingOn = true;
 };
 
 } // namespace Tmpl8

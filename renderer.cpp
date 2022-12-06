@@ -19,46 +19,45 @@ float3 Renderer::Trace( Ray& ray, int iterated )
 	if (ray.objIdx == -1) return 0; // or a fancy sky color
 	float3 I = ray.O + ray.t * ray.D;
 	float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
-	float3 albedo = scene.GetAlbedo( ray.objIdx, I );
+	Material material = scene.GetMaterial( ray.objIdx );
+	float3 albedo = scene.GetAlbedo( ray.objIdx, I ); // very bad
+	
 	/* visualize normal */ // return (N + 1) * 0.5f;
 	/* visualize distance */ // return 0.1f * float3( ray.t, ray.t, ray.t );
-	/* visualize albedo */
-
-	float reflectivity = scene.GetReflectivity(ray.objIdx, I);
-	float refractivity = scene.GetRefractivity(ray.objIdx, I);
-
+	
 	/* refraction of glass: 1.52 */
 	float n1 = 1;
 	float n2 = 1.52f;
 	float n1DividedByn2 = n1 / n2;
-	float cosThetaI = dot(N, -ray.D);
-	float k = 1 - ((n1DividedByn2  * n1DividedByn2) * (1 - (cosThetaI * cosThetaI)));
+	float cosI = dot(N, -ray.D);
+	float k = 1 - ((n1DividedByn2  * n1DividedByn2) * (1 - (cosI * cosI)));
 
-	if (refractivity > 0 && iterated < 4 && !(k < 0))
+	if (material.isGlass && iterated < 5 && !(k < 0))
 	{
-		float ThetaI = acos(cosThetaI);
-		float sinThetaI = sin(ThetaI);
-		float3 T = (n1DividedByn2 * ray.D) + (N * ((n1DividedByn2 * cosThetaI) - sqrt(k)));
-		float cosThetaT = sqrt(1 - (n1DividedByn2 * sinThetaI));
-		float3 refracted = albedo * Trace(Ray(I + (T * 0.00001f), T), iterated + 1);
-		float Rs = ((n1 * cosThetaI) - (n2 * cosThetaT)) / ((n1 * cosThetaI) + (n2 * cosThetaT));
-		float Rp = ((n1 * cosThetaI) - (n2 * cosThetaT)) / ((n1 * cosThetaI) + (n2 * cosThetaT));
+		float ThetaI = acos(cosI);
+		float sinI = sin(ThetaI);
+		float3 refractDirection = (n1DividedByn2 * ray.D) + (N * ((n1DividedByn2 * cosI) - sqrt(k)));
+		float3 refraction = albedo * Trace(Ray(I + (refractDirection * 0.001f), refractDirection), iterated + 1);
+
+		float cosT = sqrt(1 - (n1DividedByn2 * sinI));
+		float Rs = ((n1 * cosI) - (n2 * cosT)) / ((n1 * cosI) + (n2 * cosT));
+		float Rp = ((n1 * cosI) - (n2 * cosT)) / ((n1 * cosI) + (n2 * cosT));
+
 		float Fr = ((Rs * Rs) + (Rp * Rp)) / 2;
 		float Ft = 1 - Fr;
 
-		float3 R = reflect(ray.D, N);
-		float3 reflected = albedo * Trace(Ray(I + (R * 0.00001f), R), iterated + 1);
-		// return (refractivity * refracted) + ((1 - refractivity) * albedo * DirectIllumination(I, N));
-		return (Fr * reflected) + (Ft * refracted);
+		float3 reflectDirection = reflect(ray.D, N);
+		float3 reflection = albedo * Trace(Ray(I + (reflectDirection * 0.001f), reflectDirection), iterated + 1);
+		return (Fr * reflection) + (Ft * refraction);
 	}
 
-	if (reflectivity > 0 && iterated < 4) 
-	{
-		float3 R = reflect(ray.D, N);
-		float3 reflected = albedo * Trace(Ray(I + (R * 0.00001f), R), iterated + 1);
-		return (reflectivity * reflected) + ((1 - reflectivity) * albedo * DirectIllumination(I, N));
+	// reflection
+	if ((material.isMirror || (material.isGlass && k < 0))&& iterated < 5) 
+	{ 
+		float3 reflectDirection = reflect(ray.D, N);
+		float3 reflection = albedo * Trace(Ray(I + (reflectDirection * 0.001f), reflectDirection), iterated + 1);
+		return (material.reflectivity * reflection) + ((1 - material.reflectivity) * albedo * DirectIllumination(I, N));
 	}
-
 	return albedo * DirectIllumination(I, N);
 }
 
@@ -67,11 +66,11 @@ float3 Renderer::DirectIllumination(float3 I, float3 N)
 	float3 lightColor = scene.GetLightColor();
 	float3 lightPos = scene.GetLightPos();
 	float3 L = normalize(lightPos - I);
-	Ray shadowRay = Ray(I + (L * 0.00001f), L);
+	Ray shadowRay = Ray(I + (L * 0.001f), L);
 
 	scene.quad.Intersect(shadowRay);
 
-	if (scene.IsOccluded(shadowRay)) return float3(0.0f);
+	if (scene.IsOccluded(shadowRay)) return float3(0);
 
 	float d = length(lightPos - I);
 	float distF = 1 / (d * d);
@@ -90,7 +89,7 @@ void Renderer::Tick( float deltaTime )
 {
 	// animation
 	static float animTime = 0;
-	scene.SetTime( animTime += deltaTime * 0.002f );
+	//scene.SetTime( animTime += deltaTime * 0.002f );
 	// pixel loop
 	Timer t;
 
@@ -112,8 +111,29 @@ void Renderer::Tick( float deltaTime )
 	{
 		// trace a primary ray for each pixel on the line
 		for (int x = 0; x < SCRWIDTH; x++)
-			accumulator[x + y * SCRWIDTH] =
-				float4( Trace( camera.GetPrimaryRay( x, y ) , 1), 0 );
+		{
+			if (isAntiAlisingOn)
+			{
+				float sampleMatrix[4 * 2] = {
+					-Rand(2.f) / 4.f,  Rand(2.f) / 4.f,
+					-Rand(2.f) / 4.f, -Rand(2.f) / 4.f,
+					 Rand(2.f) / 4.f,  Rand(2.f) / 4.f,
+					 Rand(2.f) / 4.f, -Rand(2.f) / 4.f,
+				};
+				for (int sample = 0; sample < 4; sample++)
+				{
+					accumulator[x + y * SCRWIDTH] += float4(
+						Trace(camera.GetPrimaryRay((float)x + sampleMatrix[2 * sample], (float)y + sampleMatrix[2 * sample + 1]), 1), 0);
+				}
+				// take average
+				accumulator[x + y * SCRWIDTH] /= 4.0f;
+			}
+			else
+			{
+				accumulator[x + y * SCRWIDTH] =
+					float4(Trace(camera.GetPrimaryRay(x, y), 1), 0);
+			}
+		}
 		// translate accumulator contents to rgb32 pixels
 		for (int dest = y * SCRWIDTH, x = 0; x < SCRWIDTH; x++)
 			screen->pixels[dest + x] = 
