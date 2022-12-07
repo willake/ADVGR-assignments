@@ -8,6 +8,8 @@ void Renderer::Init()
 	// create fp32 rgb pixel buffer to render to
 	accumulator = (float4*)MALLOC64( SCRWIDTH * SCRHEIGHT * 16 );
 	memset( accumulator, 0, SCRWIDTH * SCRHEIGHT * 16 );
+	lastAccumulator = (float4*)MALLOC64(SCRWIDTH * SCRHEIGHT * 16);
+	memset(lastAccumulator, 0, SCRWIDTH * SCRHEIGHT * 16);
 }
 
 // -----------------------------------------------------------
@@ -89,7 +91,7 @@ void Renderer::Tick( float deltaTime )
 {
 	// animation
 	static float animTime = 0;
-	scene.SetTime( animTime += deltaTime * 0.002f );
+	//scene.SetTime( animTime += deltaTime * 0.002f );
 	// pixel loop
 	Timer t;
 
@@ -139,9 +141,18 @@ void Renderer::Tick( float deltaTime )
 		}
 		// translate accumulator contents to rgb32 pixels
 		for (int dest = y * SCRWIDTH, x = 0; x < SCRWIDTH; x++)
-			screen->pixels[dest + x] = 
-				RGBF32_to_RGB8( &accumulator[x + y * SCRWIDTH] );
+		{
+			if (hasDoneTheFirstCache)
+			{
+				accumulator[x + y * SCRWIDTH] = (accumulator[x + y * SCRWIDTH] + lastAccumulator[x + y * SCRWIDTH]) / 2;
+			}
+			lastAccumulator[x + y * SCRWIDTH] = accumulator[x + y * SCRWIDTH];
+
+			screen->pixels[dest + x] =
+				RGBF32_to_RGB8(&accumulator[x + y * SCRWIDTH]);
+		}
 	}
+	hasDoneTheFirstCache = true;
 	// performance report - running average - ms, MRays/s
 	static float avg = 10, alpha = 1;
 	avg = (1 - alpha) * avg + alpha * t.elapsed() * 1000;

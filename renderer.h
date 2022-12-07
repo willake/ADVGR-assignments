@@ -54,7 +54,9 @@ public:
 	float4* accumulator;
 	Scene scene;
 	Camera camera;
-	bool isAntiAlisingOn = false;
+	bool isAntiAlisingOn = true;
+	bool hasDoneTheFirstCache = false;
+	float4* lastAccumulator;
 };
 
 } // namespace Tmpl8

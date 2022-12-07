@@ -78,11 +78,6 @@ public:
 		imagePlaneTR = float4(aspect, 1, 2, 1) * orientation * translation;
 		imagePlaneBL = float4(-aspect, -1, 2, 1) * orientation * translation;
 		isUpdated = false;
-
-		printf("camPos %f %f %f \n", camPos.x, camPos.y, camPos.z);
-		printf("imagePlaneTL %f %f %f \n", imagePlaneTL.x, imagePlaneTL.y, imagePlaneTL.z);
-		printf("imagePlaneTR %f %f %f \n", imagePlaneTR.x, imagePlaneTR.y, imagePlaneTR.z);
-		printf("imagePlaneBL %f %f %f \n", imagePlaneBL.x, imagePlaneBL.y, imagePlaneBL.z);
 	}
 	float aspect = (float)SCRWIDTH / (float)SCRHEIGHT;
 	float fov = 60.0f;
