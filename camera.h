@@ -81,7 +81,7 @@ public:
 	}
 	float aspect = (float)SCRWIDTH / (float)SCRHEIGHT;
 	float fov = 60.0f;
-	float moveSpeed = 0.01f;
+	float moveSpeed = 0.005f;
 	float yaw, pitch;
 	bool isUpdated = false;
 	float3 camPos;

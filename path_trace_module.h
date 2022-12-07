@@ -17,35 +17,67 @@ public:
 		Material material = scene.GetMaterial(ray.objIdx);
 		float3 albedo = scene.GetAlbedo(ray.objIdx, I); // very bad
 
-		float3 R = DiffuseReflection(N);
-		Ray rayToHemisphere = Ray(I + R * 0.001f, R);
-		scene.FindNearest(rayToHemisphere);
-		Material rMaterial = scene.GetMaterial(rayToHemisphere.objIdx);
+		if (material.isLight) return albedo * 0.3f;
 
-		if (rMaterial.isLight)
+		/* refraction of glass: 1.52 */
+		float n1 = 1;
+		float n2 = 1.52f;
+		float n1DividedByn2 = n1 / n2;
+		float cosI = dot(N, -ray.D);
+		float k = 1 - (((n1 / n2) * (n1 / n2)) * (1 - (cosI * cosI)));
+
+		// glass
+		if (material.isGlass && iterated < 5 && !(k < 0))
 		{
-			float3 BRDF = albedo * INVPI;
-			float cosI = dot(R, N);
-			return 2.0f * PI * BRDF * rMaterial.color * cosI;
+			float ThetaI = acos(cosI);
+			float sinI = sin(ThetaI);
+			float3 refractDirection = (n1DividedByn2 * ray.D) + (N * ((n1DividedByn2 * cosI) - sqrt(k)));
+			float3 refraction = albedo * Trace(Ray(I + (refractDirection * 0.001f), refractDirection), iterated + 1);
+
+			float cosT = sqrt(1 - (n1DividedByn2 * sinI));
+			float Rs = ((n1 * cosI) - (n2 * cosT)) / ((n1 * cosI) + (n2 * cosT));
+			float Rp = ((n1 * cosI) - (n2 * cosT)) / ((n1 * cosI) + (n2 * cosT));
+
+			float Fr = ((Rs * Rs) + (Rp * Rp)) / 2;
+			float Ft = 1 - Fr;
+
+			float3 reflectDirection = reflect(ray.D, N);
+			float3 reflection = albedo * Trace(Ray(I + reflectDirection * 0.001f, reflectDirection), iterated + 1);
+			return (Fr * reflection) + (Ft * refraction);
 		}
 
-		return float3(0);
+		if ((material.isMirror || (material.isGlass && k < 0)) && iterated < 5)
+		{
+			float3 reflectDirection = reflect(ray.D, N);
+			return albedo * Trace(Ray(I + reflectDirection * 0.001f, reflectDirection), iterated + 1);
+		}
+
+		float3 R = DiffuseReflection(N);
+
+		float3 BRDF = albedo / PI;
+		
+		float3 Ei = Trace(Ray(I + R * 0.001f, R), iterated + 1) * dot(R, N);
+		
+		return 2.0f * PI * BRDF * Ei;
 	}
 
 	float3 DiffuseReflection(float3 N)
 	{
-		// could be better but I do not have idea for now xD
-		mat4 rotateX = mat4::RotateX(Rand(2 * PI));
-		mat4 rotateZ = mat4::RotateY(Rand(2 * PI));
-		mat4 rotateY = mat4::RotateZ(Rand(2 * PI));
+		// reference https://math.stackexchange.com/questions/1585975/how-to-generate-random-points-on-a-sphere
+		// I am still figuring it out
+		float u1 = Rand(1.f);
+		float u2 = Rand(1.f);
 
-		mat4 rotation = rotateX * rotateY * rotateZ;
+		float theta1 = acosf(2 * u1 - 1) - (PI / 2);
+		float theta2 = 2 * PI * u2;
 
-		float3 direction = float4(1, 1, 1, 1) * rotation;
+		float3 direction = normalize(float3(
+			cos(theta1) * cos(theta2),
+			cos(theta1) * sin(theta2),
+			sin(theta1)
+		));
 
-		float angle = acosf(dot(direction, N));
-
-		if (angle > PI) return direction * -1;
+		if (dot(direction, N) < 0) return direction * -1;
 
 		return direction;
 	}

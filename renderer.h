@@ -1,5 +1,5 @@
 #pragma once
-#include <queue>
+#include <deque>
 // default screen resolution
 #define SCRWIDTH	1280
 #define SCRHEIGHT	720
@@ -57,15 +57,15 @@ public:
 	float sensitivity = 0.1f;
 	int2 lastMousePos = int2(SCRWIDTH / 2, SCRHEIGHT / 2);
 	int2 mouseOffset = int2(0, 0);
-	float4* accumulator;
 	Scene scene;
 	RendererModuleType rendererModuleType = RendererModuleType::PathTrace;
 	PathTraceModule pathTracerModule;
 	WhittedStyleRayTraceModule whittedStyleRayTraceModule;
 	Camera camera;
 	bool isAntiAlisingOn = false;
-	queue<float4*> frameCachesPool;
-	queue<float4*> frameCaches;
+	float4* accumulator;
+	int samepleCount = 0;
+	uint maxSampleCount = 2147483645;
 };
 
 } // namespace Tmpl8

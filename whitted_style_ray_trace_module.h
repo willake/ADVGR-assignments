@@ -25,8 +25,9 @@ public:
 		float n2 = 1.52f;
 		float n1DividedByn2 = n1 / n2;
 		float cosI = dot(N, -ray.D);
-		float k = 1 - ((n1DividedByn2 * n1DividedByn2) * (1 - (cosI * cosI)));
+		float k = 1 - (((n1 / n2) * (n1 / n2)) * (1 - (cosI * cosI)));
 
+		// glass
 		if (material.isGlass && iterated < 5 && !(k < 0))
 		{
 			float ThetaI = acos(cosI);
@@ -53,6 +54,8 @@ public:
 			float3 reflection = albedo * Trace(Ray(I + (reflectDirection * 0.001f), reflectDirection), iterated + 1);
 			return (material.reflectivity * reflection) + ((1 - material.reflectivity) * albedo * DirectIllumination(I, N));
 		}
+
+		// diffuse
 		return albedo * DirectIllumination(I, N);
 	}
 
