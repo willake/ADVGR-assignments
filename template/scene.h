@@ -294,7 +294,7 @@ public:
 		float3 corner2 = TransformPosition( float3( 0.5f, 0, 0.5f ), quad.T );
 		return (corner1 + corner2) * 0.5f - float3( 0, 0.01f, 0 );
 	}
-	float3 GetRandomSubLightPos() const
+	float3 GetRandomPointOnLight() const
 	{
 		float randX = Rand(1.0f) - 0.5f;
 		float randY = Rand(1.0f) - 0.5f;

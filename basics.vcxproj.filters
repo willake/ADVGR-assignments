@@ -21,10 +21,19 @@
     <ClInclude Include="material.h">
       <Filter>template</Filter>
     </ClInclude>
+    <ClInclude Include="whitted_style_ray_trace_module.h">
+      <Filter>renderer_module</Filter>
+    </ClInclude>
+    <ClInclude Include="path_trace_module.h">
+      <Filter>renderer_module</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">
       <UniqueIdentifier>{a7d6e3cb-bfcd-438d-979f-17df241a55b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="renderer_module">
+      <UniqueIdentifier>{be32e61a-21a4-47e2-84ff-d98a93a5766b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

@@ -1,11 +1,18 @@
 #pragma once
-
+#include <queue>
 // default screen resolution
 #define SCRWIDTH	1280
 #define SCRHEIGHT	720
+#define CACHE_SIZE 10
 
 namespace Tmpl8
 {
+
+enum RendererModuleType
+{
+	WhittedStyle,
+	PathTrace
+};
 
 class Renderer : public TheApp
 {
@@ -13,7 +20,6 @@ public:
 	// game flow methods
 	void Init();
 	float3 Trace( Ray& ray, int iterated );
-	float3 DirectIllumination( float3 I, float3 N);
 	void Tick( float deltaTime );
 	void Shutdown() { /* implement if you want to do something on exit */ }
 	// input handling
@@ -53,10 +59,13 @@ public:
 	int2 mouseOffset = int2(0, 0);
 	float4* accumulator;
 	Scene scene;
+	RendererModuleType rendererModuleType = RendererModuleType::PathTrace;
+	PathTraceModule pathTracerModule;
+	WhittedStyleRayTraceModule whittedStyleRayTraceModule;
 	Camera camera;
-	bool isAntiAlisingOn = true;
-	bool hasDoneTheFirstCache = false;
-	float4* lastAccumulator;
+	bool isAntiAlisingOn = false;
+	queue<float4*> frameCachesPool;
+	queue<float4*> frameCaches;
 };
 
 } // namespace Tmpl8

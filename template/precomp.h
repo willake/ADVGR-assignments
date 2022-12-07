@@ -1650,6 +1650,8 @@ public:
 #include "material.h"
 #include "scene.h"
 #include "camera.h"
+#include "path_trace_module.h"
+#include "whitted_style_ray_trace_module.h"
 #include "renderer.h"
 
 // EOF

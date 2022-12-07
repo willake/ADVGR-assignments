@@ -131,10 +131,12 @@
   <ItemGroup>
     <ClInclude Include="camera.h" />
     <ClInclude Include="material.h" />
+    <ClInclude Include="path_trace_module.h" />
     <ClInclude Include="renderer.h" />
     <ClInclude Include="template\common.h" />
     <ClInclude Include="template\precomp.h" />
     <ClInclude Include="template\scene.h" />
+    <ClInclude Include="whitted_style_ray_trace_module.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="template\LICENSE" />
