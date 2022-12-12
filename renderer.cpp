@@ -8,21 +8,49 @@ void Renderer::Init()
 	// create fp32 rgb pixel buffer to render to
 	accumulator = (float4*)MALLOC64( SCRWIDTH * SCRHEIGHT * 16 );
 	memset( accumulator, 0, SCRWIDTH * SCRHEIGHT * 16 );
+	
+	switch (rendererModuleType)
+	{
+		case RendererModuleType::WhittedStyle:
+			whittedStyleRayTraceModule = WhittedStyleRayTraceModule();
+			break;
+		case RendererModuleType::PathTrace:
+			pathTracerModule = PathTraceModule();
+			break;
+		default:
+			whittedStyleRayTraceModule = WhittedStyleRayTraceModule();
+			break;
+	}
 }
 
 // -----------------------------------------------------------
 // Evaluate light transport
 // -----------------------------------------------------------
-float3 Renderer::Trace( Ray& ray )
+float3 Renderer::Trace( Ray& ray, int iterated )
 {
-	scene.FindNearest( ray );
-	if (ray.objIdx == -1) return 0; // or a fancy sky color
-	float3 I = ray.O + ray.t * ray.D;
-	float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
-	float3 albedo = scene.GetAlbedo( ray.objIdx, I );
-	/* visualize normal */ return (N + 1) * 0.5f;
-	/* visualize distance */ // return 0.1f * float3( ray.t, ray.t, ray.t );
-	/* visualize albedo */ // return albedo;
+	switch (rendererModuleType)
+	{
+		case RendererModuleType::WhittedStyle:
+			if (whittedStyleRayTraceModule.isInitialized == false)
+			{
+				whittedStyleRayTraceModule.Init(scene);
+			}
+			return whittedStyleRayTraceModule.Trace(ray, iterated);
+		case RendererModuleType::PathTrace:
+			if (pathTracerModule.isInitialized == false)
+			{
+				pathTracerModule.Init(scene);
+			}
+			return pathTracerModule.Trace(ray, iterated);
+		default:
+			if (whittedStyleRayTraceModule.isInitialized == false)
+			{
+				whittedStyleRayTraceModule.Init(scene);
+			}
+			return whittedStyleRayTraceModule.Trace(ray, iterated);
+	}
+
+	
 }
 
 // -----------------------------------------------------------
@@ -32,21 +60,82 @@ void Renderer::Tick( float deltaTime )
 {
 	// animation
 	static float animTime = 0;
-	scene.SetTime( animTime += deltaTime * 0.002f );
+	//scene.SetTime( animTime += deltaTime * 0.002f );
 	// pixel loop
 	Timer t;
+
+	if (isMouseButtonRightDown)
+	{
+		camera.Rotate(mouseOffset.x, mouseOffset.y);
+	}
+
+	if (verticalInput != 0 || horizontalInput != 0)
+	{
+		camera.Move(verticalInput, horizontalInput, deltaTime);
+	}
+
+	if (camera.isUpdated)
+	{
+		camera.UpdateView();
+		samepleCount = 0;
+	}
+
+	if (samepleCount == maxSampleCount)
+	{
+		samepleCount = 0;
+	}
+
 	// lines are executed as OpenMP parallel tasks (disabled in DEBUG)
 	#pragma omp parallel for schedule(dynamic)
 	for (int y = 0; y < SCRHEIGHT; y++)
 	{
 		// trace a primary ray for each pixel on the line
 		for (int x = 0; x < SCRWIDTH; x++)
-			accumulator[x + y * SCRWIDTH] =
-				float4( Trace( camera.GetPrimaryRay( x, y ) ), 0 );
+		{
+			if (isAntiAlisingOn)
+			{
+				float sampleMatrix[4 * 2] = {
+					-Rand(2.f) / 4.f,  Rand(2.f) / 4.f,
+					-Rand(2.f) / 4.f, -Rand(2.f) / 4.f,
+					 Rand(2.f) / 4.f,  Rand(2.f) / 4.f,
+					 Rand(2.f) / 4.f, -Rand(2.f) / 4.f,
+				};
+				for (int sample = 0; sample < 4; sample++)
+				{
+					accumulator[x + y * SCRWIDTH] += float4(
+						Trace(camera.GetPrimaryRay((float)x + sampleMatrix[2 * sample], (float)y + sampleMatrix[2 * sample + 1]), 1), 0);
+				}
+				// take average
+				accumulator[x + y * SCRWIDTH] /= 4.0f;
+			}
+			else
+			{
+				if (samepleCount == 0)
+				{
+					accumulator[x + y * SCRWIDTH] = float4(Trace(camera.GetPrimaryRay(x, y), 1), 0);
+				}
+				else
+				{
+					float4 color = float4(Trace(camera.GetPrimaryRay(x, y), 1), 0);
+					float4 last = accumulator[x + y * SCRWIDTH];
+					accumulator[x + y * SCRWIDTH] = last + ((color - last) / samepleCount);
+				}
+			}
+		}
+		 
 		// translate accumulator contents to rgb32 pixels
 		for (int dest = y * SCRWIDTH, x = 0; x < SCRWIDTH; x++)
-			screen->pixels[dest + x] = 
-				RGBF32_to_RGB8( &accumulator[x + y * SCRWIDTH] );
+		{
+			//for (auto it = frameCaches.begin(); it != frameCaches.end(); it++)
+			//{
+				//float4* temp = *it;
+				//accumulator[x + y * SCRWIDTH] += temp[x + y * SCRWIDTH];
+			//}
+			//accumulator[x + y * SCRWIDTH] /= (float)(frameCaches.size() + 1);
+
+			screen->pixels[dest + x] =
+				RGBF32_to_RGB8(&accumulator[x + y * SCRWIDTH]);
+		}
 	}
 	// performance report - running average - ms, MRays/s
 	static float avg = 10, alpha = 1;
@@ -54,4 +143,6 @@ void Renderer::Tick( float deltaTime )
 	if (alpha > 0.05f) alpha *= 0.5f;
 	float fps = 1000 / avg, rps = (SCRWIDTH * SCRHEIGHT) * fps;
 	printf( "%5.2fms (%.1fps) - %.1fMrays/s\n", avg, fps, rps / 1000000 );
+
+	samepleCount++;
 }
