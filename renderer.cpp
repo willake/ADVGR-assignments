@@ -35,6 +35,13 @@ void Renderer::Tick( float deltaTime )
 	scene.SetTime( animTime += deltaTime * 0.002f );
 	// pixel loop
 	Timer t;
+
+	if (isMouseButtonRightDown) camera.Rotate(mouseOffset.x, mouseOffset.y);
+
+	if (verticalInput != 0 || horizontalInput != 0) camera.Move(verticalInput, horizontalInput, deltaTime);
+
+	if (camera.isUpdated) camera.UpdateView();
+
 	// lines are executed as OpenMP parallel tasks (disabled in DEBUG)
 	#pragma omp parallel for schedule(dynamic)
 	for (int y = 0; y < SCRHEIGHT; y++)
