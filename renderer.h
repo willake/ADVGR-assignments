@@ -58,7 +58,7 @@ public:
 	int2 lastMousePos = int2(SCRWIDTH / 2, SCRHEIGHT / 2);
 	int2 mouseOffset = int2(0, 0);
 	Scene scene;
-	RendererModuleType rendererModuleType = RendererModuleType::PathTrace;
+	RendererModuleType rendererModuleType = RendererModuleType::WhittedStyle;
 	PathTraceModule pathTracerModule;
 	WhittedStyleRayTraceModule whittedStyleRayTraceModule;
 	Camera camera;
