@@ -238,48 +238,23 @@ public:
 	{
 		float3 v0v1 = v[1] - v[0];  //edge 0 
 		float3 v0v2 = v[2] - v[0];  //edge 1 
-		float3 N = normalize(cross(v0v1, v0v2));  //this is the triangle's normal 
-		
-		float denom = dot(N, N);
+		float3 pvec = cross(ray.D, v0v2);
+		float det = dot(v0v1, pvec);
 
 		// check if ray and plane are parallel ?
-		if (fabs(dot(N, ray.D)) < FLT_EPSILON) return;
+		if (fabs(det) < FLT_EPSILON) return;
 
-		// implementing the single/double sided feature
-		//if (dot(N, ray.D) > 0)
-		//	return;  //back-facing surface 
+		float invDet = 1 / det;
 
-		float d = -dot(N, v[0]);
-		//float t = (dot(N, ray.O) + d) / dot(N, ray.D);
-		float t = -(dot(N, ray.O) + d) / dot(N, ray.D);
-		// check if the triangle is in behind the ray
-		if (t < 0) return;
+		float3 tvec = ray.O - v[0];
+		float u = dot(tvec, pvec) * invDet;
+		if (u < 0 || u > 1) return;
 
-		float3 I = ray.O + (t * ray.D);
+		float3 qvec = cross(tvec, v0v1);
+		float v = dot(ray.D, qvec) * invDet;
+		if (v < 0 || u + v > 1) return;
 
-		float3 C;
-
-		float3 edge0 = v[1] - v[0];
-		float3 Iv0 = I - v[0];
-		C = cross(edge0, Iv0);
-		if (dot(N, C) < 0) return;
-
-		float3 edge1 = v[2] - v[1];
-		float3 Iv1 = I - v[1];
-		C = cross(edge1, Iv1);
-		//u = dot(N, C);
-		if (dot(N, C) < 0) return;
-
-		float3 edge2 = v[0] - v[2];
-		float3 Iv2 = I - v[2];
-		C = cross(edge2, Iv2);
-		//v = dot(N, C);
-		if (dot(N, C) < 0) return;
-
-		//u /= denom;
-		//v /= denom;
-
-		ray.t = t, ray.objIdx = objIdx;
+		ray.t = dot(v0v2, qvec) * invDet, ray.objIdx = objIdx;
 	}
 	float3 GetNormal(const float3 I) const
 	{
@@ -317,8 +292,8 @@ public:
 		plane[5] = Plane( 9, float3( 0, 0, -1 ), 3.99f );		// 9: back wall
 		triangle = Triangle(10, new float3[3]{
 			float3(-0.5f, -0.5f, 0),
-			float3(0.5, -0.5f, 0),
-			float3(0, 0.5f, 0)
+			float3(0, 0.5f, 0),
+			float3(0.5, -0.5f, 0)
 		});
 		SetTime( 0 );
 
@@ -440,7 +415,7 @@ public:
 		if (objIdx == 3) return cubeMaterial; // cube
 		if (objIdx == 6) return floorMaterial;
 		if (objIdx == 9) return backWallMaterial;
-		if (objIdx == 10) return errorMaterial;
+		if (objIdx == 10) return whiteMaterial;
 		return planeMaterial;
 	}
 
@@ -453,7 +428,7 @@ public:
 		if (objIdx == 3) return cubeMaterial.GetAlbedo(I); // cube
 		if (objIdx == 6) return floorMaterial.GetAlbedo(I);
 		if (objIdx == 9) return backWallMaterial.GetAlbedo(I);
-		if (objIdx == 10) return errorMaterial.GetAlbedo(I);
+		if (objIdx == 10) return whiteMaterial.GetAlbedo(I);
 		return planeMaterial.GetAlbedo(I);
 		// once we have triangle support, we should pass objIdx and the bary-
 		// centric coordinates of the hit, instead of the intersection location.
