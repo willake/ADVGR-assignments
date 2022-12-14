@@ -219,6 +219,55 @@ public:
 	int objIdx = -1;
 };
 // -----------------------------------------------------------
+// Triangle primitive
+// reference: https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/barycentric-coordinates
+// -----------------------------------------------------------
+class Triangle
+{
+public:
+	Triangle() = default;
+	Triangle(int idx, float3 vertices[3], mat4 transform = mat4::Identity())
+	{
+		objIdx = idx;
+		v[0] = vertices[0];
+		v[1] = vertices[1];
+		v[2] = vertices[2];
+		M = transform, invM = transform.FastInvertedTransformNoScale();
+	}
+	void Intersect(Ray& ray) const
+	{
+		float3 v0v1 = v[1] - v[0];  //edge 0 
+		float3 v0v2 = v[2] - v[0];  //edge 1 
+		float3 pvec = cross(ray.D, v0v2);
+		float det = dot(v0v1, pvec);
+
+		// check if ray and plane are parallel ?
+		if (fabs(det) < FLT_EPSILON) return;
+
+		float invDet = 1 / det;
+
+		float3 tvec = ray.O - v[0];
+		float u = dot(tvec, pvec) * invDet;
+		if (u < 0 || u > 1) return;
+
+		float3 qvec = cross(tvec, v0v1);
+		float v = dot(ray.D, qvec) * invDet;
+		if (v < 0 || u + v > 1) return;
+
+		ray.t = dot(v0v2, qvec) * invDet, ray.objIdx = objIdx;
+	}
+	float3 GetNormal(const float3 I) const
+	{
+		float3 v0v1 = v[1] - v[0];  //edge 0 
+		float3 v0v2 = v[2] - v[0];  //edge 1 
+		float3 N = cross(v0v1, v0v2);  //this is the triangle's normal 
+		return normalize(N);
+	}
+	float3 v[3];
+	mat4 M, invM;
+	int objIdx = -1;
+};
+// -----------------------------------------------------------
 // Scene class
 // We intersect this. The query is internally forwarded to the
 // list of primitives, so that the nearest hit can be returned.
@@ -241,6 +290,11 @@ public:
 		plane[3] = Plane( 7, float3( 0, -1, 0 ), 2 );			// 7: ceiling
 		plane[4] = Plane( 8, float3( 0, 0, 1 ), 3 );			// 8: front wall
 		plane[5] = Plane( 9, float3( 0, 0, -1 ), 3.99f );		// 9: back wall
+		triangle = Triangle(10, new float3[3]{
+			float3(-0.5f, -0.5f, 0),
+			float3(0, 0.5f, 0),
+			float3(0.5, -0.5f, 0)
+		});
 		SetTime( 0 );
 
 		lightMaterial = Material();
@@ -315,6 +369,7 @@ public:
 		sphere.Intersect( ray );
 		sphere2.Intersect( ray );
 		cube.Intersect( ray );
+		triangle.Intersect(ray);
 	}
 	bool IsOccluded( Ray& ray ) const
 	{
@@ -324,6 +379,7 @@ public:
 		sphere.Intersect( ray );
 		sphere2.Intersect( ray );
 		cube.Intersect( ray );
+		triangle.Intersect(ray);
 		return ray.t < rayLength;
 		// technically this is wasteful: 
 		// - we potentially search beyond rayLength
@@ -340,6 +396,7 @@ public:
 		else if (objIdx == 1) N = sphere.GetNormal( I );
 		else if (objIdx == 2) N = sphere2.GetNormal( I );
 		else if (objIdx == 3) N = cube.GetNormal( I );
+		else if (objIdx == 10) N = triangle.GetNormal(I);
 		else 
 		{
 			// faster to handle the 6 planes without a call to GetNormal
@@ -358,6 +415,7 @@ public:
 		if (objIdx == 3) return cubeMaterial; // cube
 		if (objIdx == 6) return floorMaterial;
 		if (objIdx == 9) return backWallMaterial;
+		if (objIdx == 10) return whiteMaterial;
 		return planeMaterial;
 	}
 
@@ -370,6 +428,7 @@ public:
 		if (objIdx == 3) return cubeMaterial.GetAlbedo(I); // cube
 		if (objIdx == 6) return floorMaterial.GetAlbedo(I);
 		if (objIdx == 9) return backWallMaterial.GetAlbedo(I);
+		if (objIdx == 10) return whiteMaterial.GetAlbedo(I);
 		return planeMaterial.GetAlbedo(I);
 		// once we have triangle support, we should pass objIdx and the bary-
 		// centric coordinates of the hit, instead of the intersection location.
@@ -381,6 +440,7 @@ public:
 	Sphere sphere2;
 	Cube cube;
 	Plane plane[6];
+	Triangle triangle;
 	Material lightMaterial;
 	Material errorMaterial; // for error
 	Material whiteMaterial;
