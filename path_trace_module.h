@@ -22,27 +22,24 @@ public:
 
 	float3 Sample(Ray& ray, int depth)
 	{
+		if (depth > 5) return 0;
 		scene.FindNearest(ray);
 		if (ray.objIdx == -1) return 0; // or a fancy sky color
 		float3 I = ray.O + ray.t * ray.D;
 		float3 N = scene.GetNormal(ray.objIdx, I, ray.D);
 		Material material = scene.GetMaterial(ray.objIdx);
+
+		if (material.isLight) return scene.GetLightColor();
+
 		float3 albedo = scene.GetAlbedo(ray.objIdx, I); // very bad
 
 		float3 R = DiffuseReflection(N);
 		Ray rayToHemisphere = Ray(I + R * FLT_EPSILON, R);
-		scene.FindNearest(rayToHemisphere);
-		Material RMaterial = scene.GetMaterial(rayToHemisphere.objIdx);
-		float3 RAlbedo = scene.GetAlbedo(rayToHemisphere.objIdx, I); // very bad
 
-		if (RMaterial.isLight)
-		{
-			float3 BRDF = albedo * INVPI;
-			float cos_i = dot(R, N);
-			return 2.0f * PI * BRDF * scene.GetLightColor() * cos_i;
-		}
+		float3 BRDF = albedo * INVPI;
+		float3 Ei = Sample(rayToHemisphere, depth + 1) * dot(N, R);
 
-		return 0.0f;
+		return PI * 2.0f * BRDF * Ei;
 	}
 	/*
 	float3 Sample(Ray& ray, int depth)
