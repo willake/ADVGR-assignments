@@ -290,11 +290,11 @@ public:
 		plane[3] = Plane( 7, float3( 0, -1, 0 ), 2 );			// 7: ceiling
 		plane[4] = Plane( 8, float3( 0, 0, 1 ), 3 );			// 8: front wall
 		plane[5] = Plane( 9, float3( 0, 0, -1 ), 3.99f );		// 9: back wall
-		triangle = Triangle(10, new float3[3]{
+		/*triangle = Triangle(10, new float3[3]{
 			float3(-0.5f, -0.5f, 0),
 			float3(0, 0.5f, 0),
 			float3(0.5, -0.5f, 0)
-		});
+		});*/
 		SetTime( 0 );
 
 		lightMaterial = Material();
@@ -356,7 +356,7 @@ public:
 	}
 	float3 GetLightColor() const
 	{
-		return float3( 24, 24, 22 );
+		return float3( 2, 2, 1.6 );
 	}
 	void FindNearest( Ray& ray ) const
 	{
@@ -379,7 +379,7 @@ public:
 		sphere.Intersect( ray );
 		sphere2.Intersect( ray );
 		cube.Intersect( ray );
-		triangle.Intersect(ray);
+		//triangle.Intersect(ray);
 		return ray.t < rayLength;
 		// technically this is wasteful: 
 		// - we potentially search beyond rayLength

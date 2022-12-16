@@ -19,7 +19,7 @@ class Renderer : public TheApp
 public:
 	// game flow methods
 	void Init();
-	float3 Trace( Ray& ray, int iterated );
+	float3 Trace( Ray& ray);
 	void Tick( float deltaTime );
 	void Shutdown() { /* implement if you want to do something on exit */ }
 	// input handling
@@ -58,7 +58,7 @@ public:
 	int2 lastMousePos = int2(SCRWIDTH / 2, SCRHEIGHT / 2);
 	int2 mouseOffset = int2(0, 0);
 	Scene scene;
-	RendererModuleType rendererModuleType = RendererModuleType::WhittedStyle;
+	RendererModuleType rendererModuleType = RendererModuleType::PathTrace;
 	PathTraceModule pathTracerModule;
 	WhittedStyleRayTraceModule whittedStyleRayTraceModule;
 	Camera camera;
