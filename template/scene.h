@@ -356,7 +356,7 @@ public:
 	}
 	float3 GetLightColor() const
 	{
-		return float3( 24, 24, 22 );
+		return float3( 2, 2, 1.6 );
 	}
 	void FindNearest( Ray& ray ) const
 	{

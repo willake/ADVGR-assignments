@@ -26,7 +26,7 @@ void Renderer::Init()
 // -----------------------------------------------------------
 // Evaluate light transport
 // -----------------------------------------------------------
-float3 Renderer::Trace( Ray& ray, int iterated )
+float3 Renderer::Trace( Ray& ray)
 {
 	switch (rendererModuleType)
 	{
@@ -35,19 +35,19 @@ float3 Renderer::Trace( Ray& ray, int iterated )
 			{
 				whittedStyleRayTraceModule.Init(scene);
 			}
-			return whittedStyleRayTraceModule.Trace(ray, iterated);
+			return whittedStyleRayTraceModule.Trace(ray, 1);
 		case RendererModuleType::PathTrace:
 			if (pathTracerModule.isInitialized == false)
 			{
 				pathTracerModule.Init(scene);
 			}
-			return pathTracerModule.Trace(ray, iterated);
+			return pathTracerModule.Trace(ray);
 		default:
 			if (whittedStyleRayTraceModule.isInitialized == false)
 			{
 				whittedStyleRayTraceModule.Init(scene);
 			}
-			return whittedStyleRayTraceModule.Trace(ray, iterated);
+			return whittedStyleRayTraceModule.Trace(ray, 1);
 	}
 
 	
@@ -103,7 +103,7 @@ void Renderer::Tick( float deltaTime )
 				for (int sample = 0; sample < 4; sample++)
 				{
 					accumulator[x + y * SCRWIDTH] += float4(
-						Trace(camera.GetPrimaryRay((float)x + sampleMatrix[2 * sample], (float)y + sampleMatrix[2 * sample + 1]), 1), 0);
+						Trace(camera.GetPrimaryRay((float)x + sampleMatrix[2 * sample], (float)y + sampleMatrix[2 * sample + 1])), 0);
 				}
 				// take average
 				accumulator[x + y * SCRWIDTH] /= 4.0f;
@@ -112,11 +112,11 @@ void Renderer::Tick( float deltaTime )
 			{
 				if (samepleCount == 0)
 				{
-					accumulator[x + y * SCRWIDTH] = float4(Trace(camera.GetPrimaryRay(x, y), 1), 0);
+					accumulator[x + y * SCRWIDTH] = float4(Trace(camera.GetPrimaryRay(x, y)), 0);
 				}
 				else
 				{
-					float4 color = float4(Trace(camera.GetPrimaryRay(x, y), 1), 0);
+					float4 color = float4(Trace(camera.GetPrimaryRay(x, y)), 0);
 					float4 last = accumulator[x + y * SCRWIDTH];
 					accumulator[x + y * SCRWIDTH] = last + ((color - last) / samepleCount);
 				}
