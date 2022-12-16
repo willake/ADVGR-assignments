@@ -33,6 +33,46 @@ public:
 
 		float3 albedo = scene.GetAlbedo(ray.objIdx, I); // very bad
 
+		//refraction of glass: 1.52 
+		float n1 = 1;
+		float n2 = 1.52f;
+		float n1DividedByn2 = n1 / n2;
+		float cosI = dot(N, -ray.D);
+		float k = 1 - (((n1 / n2) * (n1 / n2)) * (1 - (cosI * cosI)));
+
+		// glass
+		if (material.isGlass && !(k < 0))
+		{
+			float ThetaI = acos(cosI);
+			float sinI = sin(ThetaI);
+
+			float cosT = sqrt(1 - (n1DividedByn2 * sinI));
+			float Rs = ((n1 * cosI) - (n2 * cosT)) / ((n1 * cosI) + (n2 * cosT));
+			float Rp = ((n1 * cosI) - (n2 * cosT)) / ((n1 * cosI) + (n2 * cosT));
+
+			float Fr = ((Rs * Rs) + (Rp * Rp)) / 2;
+			//float Ft = 1 - Fr;
+
+			float p = Rand(1);
+
+			if(p > Fr)
+			{
+				float3 reflectDirection = reflect(ray.D, N);
+				return albedo * Sample(Ray(I + reflectDirection * 0.001f, reflectDirection), depth + 1);
+			}
+			else
+			{
+				float3 refractDirection = (n1DividedByn2 * ray.D) + (N * ((n1DividedByn2 * cosI) - sqrt(k)));
+				return albedo * Sample(Ray(I + (refractDirection * 0.001f), refractDirection), depth + 1);
+			}
+		}
+
+		if (material.isMirror || (material.isGlass && k < 0))
+		{
+			float3 reflectDirection = reflect(ray.D, N);
+			return albedo * Sample(Ray(I + N * FLT_EPSILON, reflectDirection), depth + 1);
+		}
+
 		float3 R = DiffuseReflection(N);
 		Ray rayToHemisphere = Ray(I + R * FLT_EPSILON, R);
 
