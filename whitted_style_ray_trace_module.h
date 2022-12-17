@@ -8,7 +8,7 @@ public:
 		isInitialized = true;
 	}
 
-	float3 Trace(Ray& ray, int iterated)
+	float3 Trace(Ray& ray, int depth)
 	{
 		scene.FindNearest(ray);
 		if (ray.objIdx == -1) return 0; // or a fancy sky color
@@ -27,31 +27,43 @@ public:
 		float cosI = dot(N, -ray.D);
 		float k = 1 - (((n1 / n2) * (n1 / n2)) * (1 - (cosI * cosI)));
 
+		if (depth > depthLimit)
+		{
+			return albedo * DirectIllumination(I, N);
+		}
+
 		// glass
-		if (material.isGlass && iterated < 5 && !(k < 0))
+		if (material.isGlass && !(k < 0))
 		{
 			float ThetaI = acos(cosI);
 			float sinI = sin(ThetaI);
-			float3 refractDirection = (n1DividedByn2 * ray.D) + (N * ((n1DividedByn2 * cosI) - sqrt(k)));
-			float3 refraction = albedo * Trace(Ray(I + (refractDirection * 0.001f), refractDirection), iterated + 1);
 
 			float cosT = sqrt(1 - (n1DividedByn2 * sinI));
 			float Rs = ((n1 * cosI) - (n2 * cosT)) / ((n1 * cosI) + (n2 * cosT));
 			float Rp = ((n1 * cosI) - (n2 * cosT)) / ((n1 * cosI) + (n2 * cosT));
 
 			float Fr = ((Rs * Rs) + (Rp * Rp)) / 2;
-			float Ft = 1 - Fr;
+			//float Ft = 1 - Fr;
 
-			float3 reflectDirection = reflect(ray.D, N);
-			float3 reflection = albedo * Trace(Ray(I + (reflectDirection * 0.001f), reflectDirection), iterated + 1);
-			return (Fr * reflection) + (Ft * refraction);
+			float p = Rand(1);
+
+			if (p > Fr)
+			{
+				float3 reflectDirection = reflect(ray.D, N);
+				return albedo * Trace(Ray(I + reflectDirection * 0.001f, reflectDirection), depth + 1);
+			}
+			else
+			{
+				float3 refractDirection = (n1DividedByn2 * ray.D) + (N * ((n1DividedByn2 * cosI) - sqrt(k)));
+				return albedo * Trace(Ray(I + (refractDirection * 0.001f), refractDirection), depth + 1);
+			}
 		}
 
 		// reflection
-		if ((material.isMirror || (material.isGlass && k < 0)) && iterated < 5)
+		if (material.isMirror || (material.isGlass && k < 0))
 		{
 			float3 reflectDirection = reflect(ray.D, N);
-			float3 reflection = albedo * Trace(Ray(I + (reflectDirection * 0.001f), reflectDirection), iterated + 1);
+			float3 reflection = albedo * Trace(Ray(I + (reflectDirection * 0.001f), reflectDirection), depth + 1);
 			return (material.reflectivity * reflection) + ((1 - material.reflectivity) * albedo * DirectIllumination(I, N));
 		}
 
@@ -77,9 +89,10 @@ public:
 		lightColor.y = lightColor.y * distF * angleF;
 		lightColor.z = lightColor.z * distF * angleF;
 
-		return lightColor * 0.3f;
+		return lightColor;
 	}
 
+	int depthLimit = 5;
 	bool isInitialized = false;
 	Scene scene;
 };
