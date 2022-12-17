@@ -254,7 +254,12 @@ public:
 		float v = dot(ray.D, qvec) * invDet;
 		if (v < 0 || u + v > 1) return;
 
-		ray.t = dot(v0v2, qvec) * invDet, ray.objIdx = objIdx;
+		float t = dot(v0v2, qvec) * invDet;
+		if (t > FLT_EPSILON)
+		{
+			ray.t = min(ray.t, t);
+			ray.objIdx = objIdx;
+		}
 	}
 	float3 GetNormal(const float3 I) const
 	{
@@ -290,11 +295,11 @@ public:
 		plane[3] = Plane( 7, float3( 0, -1, 0 ), 2 );			// 7: ceiling
 		plane[4] = Plane( 8, float3( 0, 0, 1 ), 3 );			// 8: front wall
 		plane[5] = Plane( 9, float3( 0, 0, -1 ), 3.99f );		// 9: back wall
-		/*triangle = Triangle(10, new float3[3]{
+		triangle = Triangle(10, new float3[3]{
 			float3(-0.5f, -0.5f, 0),
 			float3(0, 0.5f, 0),
 			float3(0.5, -0.5f, 0)
-		});*/
+		});
 		SetTime( 0 );
 
 		lightMaterial = Material();
@@ -379,7 +384,7 @@ public:
 		sphere.Intersect( ray );
 		sphere2.Intersect( ray );
 		cube.Intersect( ray );
-		//triangle.Intersect(ray);
+		triangle.Intersect(ray);
 		return ray.t < rayLength;
 		// technically this is wasteful: 
 		// - we potentially search beyond rayLength
