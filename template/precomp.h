@@ -1647,8 +1647,11 @@ public:
 	Surface* screen = 0;
 };
 
+#include "primitive.h"
 #include "material.h"
+#include "ray.h"
 #include "scene.h"
+#include "tri_scene.h"
 #include "camera.h"
 #include "path_trace_module.h"
 #include "whitted_style_ray_trace_module.h"
