@@ -39,6 +39,9 @@
     <ClInclude Include="bvh.h">
       <Filter>template</Filter>
     </ClInclude>
+    <ClInclude Include="simple_triangle_ray_trace_module.h">
+      <Filter>renderer_module</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

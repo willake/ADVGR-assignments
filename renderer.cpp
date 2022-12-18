@@ -11,14 +11,15 @@ void Renderer::Init()
 	
 	switch (rendererModuleType)
 	{
+		case RendererModuleType::Triangle:
+			triangleTracerModule = SimpleTriangleRayTraceModule();
+			break;
 		case RendererModuleType::WhittedStyle:
+		default:
 			whittedStyleRayTraceModule = WhittedStyleRayTraceModule();
 			break;
 		case RendererModuleType::PathTrace:
 			pathTracerModule = PathTraceModule();
-			break;
-		default:
-			whittedStyleRayTraceModule = WhittedStyleRayTraceModule();
 			break;
 	}
 }
@@ -31,6 +32,7 @@ float3 Renderer::Trace( Ray& ray)
 	switch (rendererModuleType)
 	{
 		case RendererModuleType::WhittedStyle:
+		default:
 			if (whittedStyleRayTraceModule.isInitialized == false)
 			{
 				whittedStyleRayTraceModule.Init(scene);
@@ -42,12 +44,12 @@ float3 Renderer::Trace( Ray& ray)
 				pathTracerModule.Init(scene);
 			}
 			return pathTracerModule.Trace(ray);
-		default:
-			if (whittedStyleRayTraceModule.isInitialized == false)
+		case RendererModuleType::Triangle:
+			if (triangleTracerModule.isInitialized == false)
 			{
-				whittedStyleRayTraceModule.Init(scene);
+				triangleTracerModule.Init(triScene);
 			}
-			return whittedStyleRayTraceModule.Trace(ray, 1);
+			return triangleTracerModule.Trace(ray);
 	}
 
 	

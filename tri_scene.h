@@ -109,6 +109,11 @@ namespace Tmpl8 {
 			return normalize(n);
 		}
 
+		void FindNearest(Ray& ray)
+		{
+			IntersectBVH(ray, rootNodeIdx);
+		}
+
 		void IntersectBVH(Ray& ray, const uint nodeIdx)
 		{
 			BVHNode& node = bvhNode[nodeIdx];
@@ -116,7 +121,10 @@ namespace Tmpl8 {
 			if (node.isLeaf())
 			{
 				for (uint i = 0; i < node.triCount; i++)
-					IntersectTri(ray, tri[triIdx[node.firstTriIdx + i]]);
+				{
+					if (IntersectTri(ray, tri[triIdx[node.firstTriIdx + i]]))
+						ray.objIdx = triIdx[node.firstTriIdx + i];
+				}
 			}
 			else
 			{
@@ -136,25 +144,26 @@ namespace Tmpl8 {
 			return tmax >= tmin && tmin < ray.t&& tmax > 0;
 		}
 
-		void IntersectTri(Ray& ray, const Tri& tri)
+		bool IntersectTri(Ray& ray, const Tri& tri)
 		{
 			const float3 edge1 = tri.vertex1 - tri.vertex0;
 			const float3 edge2 = tri.vertex2 - tri.vertex0;
 			const float3 h = cross(ray.D, edge2);
 			const float a = dot(edge1, h);
-			if (a > -0.0001f && a < 0.0001f) return; // ray parallel to triangle
+			if (a > -0.0001f && a < 0.0001f) return false; // ray parallel to triangle
 			const float f = 1 / a;
 			const float3 s = ray.O - tri.vertex0;
 			const float u = f * dot(s, h);
-			if (u < 0 || u > 1) return;
+			if (u < 0 || u > 1) return false;
 			const float3 q = cross(s, edge1);
 			const float v = f * dot(ray.D, q);
-			if (v < 0 || u + v > 1) return;
+			if (v < 0 || u + v > 1) return false;
 			const float t = f * dot(edge2, q);
-			if (t > 0.0001f)
-			{
-				ray.t = min(ray.t, t);
-			}
+			if (t < FLT_EPSILON) return false;
+
+			ray.t = min(ray.t, t);
+			return true;
+			
 		}
 		float3 GetLightPos() const
 		{
@@ -173,10 +182,7 @@ namespace Tmpl8 {
 		{
 			return float3(2, 2, 1.6);
 		}
-		void FindNearest(Ray& ray)
-		{
-			for (int i = 0; i < TriN; i++) IntersectTri(ray, tri[i]);
-		}
+
 		bool IsOccluded(Ray& ray) const
 		{
 		}

@@ -11,13 +11,8 @@ namespace Tmpl8
 enum RendererModuleType
 {
 	WhittedStyle,
-	PathTrace
-};
-
-enum SceneType
-{
-	Primitives,
-	Triangles
+	PathTrace,
+	Triangle
 };
 
 class Renderer : public TheApp
@@ -65,8 +60,8 @@ public:
 	int2 mouseOffset = int2(0, 0);
 	Scene scene;
 	TriScene triScene;
-	SceneType sceneType = SceneType::Primitives;
-	RendererModuleType rendererModuleType = RendererModuleType::WhittedStyle;
+	RendererModuleType rendererModuleType = RendererModuleType::Triangle;
+	SimpleTriangleRayTraceModule triangleTracerModule;
 	PathTraceModule pathTracerModule;
 	WhittedStyleRayTraceModule whittedStyleRayTraceModule;
 	Camera camera;
