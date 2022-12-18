@@ -67,7 +67,7 @@ public:
 
 		cubeMaterial = Material();
 		cubeMaterial.isGlass = true;
-		cubeMaterial.color = float3(103 / 255.f, 137 / 255.f, 131 / 255.f);
+		cubeMaterial.color = float3(203 / 255.f, 237 / 255.f, 213 / 255.f);
 
 		planeMaterial = Material();
 		planeMaterial.color = float3(.8f);
@@ -112,7 +112,7 @@ public:
 	}
 	float3 GetLightColor() const
 	{
-		return float3( 2, 2, 1.6 );
+		return float3( 4, 4, 3.2 );
 	}
 	void FindNearest( Ray& ray ) const
 	{

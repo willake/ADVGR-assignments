@@ -14,6 +14,12 @@ enum RendererModuleType
 	PathTrace
 };
 
+enum SceneType
+{
+	Primitives,
+	Triangles
+};
+
 class Renderer : public TheApp
 {
 public:
@@ -58,6 +64,8 @@ public:
 	int2 lastMousePos = int2(SCRWIDTH / 2, SCRHEIGHT / 2);
 	int2 mouseOffset = int2(0, 0);
 	Scene scene;
+	TriScene triScene;
+	SceneType sceneType = SceneType::Primitives;
 	RendererModuleType rendererModuleType = RendererModuleType::WhittedStyle;
 	PathTraceModule pathTracerModule;
 	WhittedStyleRayTraceModule whittedStyleRayTraceModule;

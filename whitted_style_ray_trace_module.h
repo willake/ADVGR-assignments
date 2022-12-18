@@ -45,9 +45,9 @@ public:
 			float Fr = ((Rs * Rs) + (Rp * Rp)) / 2;
 			//float Ft = 1 - Fr;
 
-			float p = Rand(1);
+			float p = RandomFloat();
 
-			if (p > Fr)
+			if (p > 0.5)
 			{
 				float3 reflectDirection = reflect(ray.D, N);
 				return albedo * Trace(Ray(I + reflectDirection * 0.001f, reflectDirection), depth + 1);
