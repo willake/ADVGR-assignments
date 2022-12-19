@@ -35,6 +35,7 @@ class Scene
 public:
 	Scene()
 	{
+		/*
 		// we store all primitives in one continuous buffer
 		quad = Quad( 0, 1 );									// 0: light source
 		sphere = Sphere( 1, float3( 0 ), 0.5f );				// 1: bouncing ball
@@ -76,7 +77,7 @@ public:
 		floorMaterial.isMirror = true;
 		floorMaterial.reflectivity = 0.3f;
 
-		backWallMaterial = BackWallMaterial();
+		backWallMaterial = BackWallMaterial(); */
 		// Note: once we have triangle support we should get rid of the class
 		// hierarchy: virtuals reduce performance somewhat.
 	}

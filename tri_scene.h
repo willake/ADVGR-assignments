@@ -1,5 +1,5 @@
 #pragma once
-#define TriN 64
+#define TriN 100
 
 namespace Tmpl8 {
 	struct Tri { float3 vertex0, vertex1, vertex2; float3 centroid; };
@@ -9,16 +9,17 @@ namespace Tmpl8 {
 	public:
 		TriScene()
 		{
-			for (int i = 0; i < TriN; i++)
+			FILE* file = fopen("assets/unity.tri", "r");
+			float a, b, c, d, e, f, g, h, i;
+			for (int t = 0; t < TriN; t++)
 			{
-				float3 r0(RandomFloat(), RandomFloat(), RandomFloat());
-				float3 r1(RandomFloat(), RandomFloat(), RandomFloat());
-				float3 r2(RandomFloat(), RandomFloat(), RandomFloat());
-				tri[i].vertex0 = r0 * 9 - float3(5);
-				tri[i].vertex1 = tri[i].vertex0 + r1;
-				tri[i].vertex2 = tri[i].vertex0 + r2;
+				fscanf(file, "%f %f %f %f %f %f %f %f %f\n",
+					&a, &b, &c, &d, &e, &f, &g, &h, &i);
+				tri[t].vertex0 = float3(a, b, c);
+				tri[t].vertex1 = float3(d, e, f);
+				tri[t].vertex2 = float3(g, h, i);
 			}
-			SetTime(0);
+			fclose(file);
 			BuildBVH();
 
 			whiteMaterial = Material();
@@ -67,11 +68,19 @@ namespace Tmpl8 {
 			BVHNode& node = bvhNode[nodeIdx];
 			if (node.triCount <= 2) return;
 			// determine split axis and position
-			float3 extent = node.aabbMax - node.aabbMin;
-			int axis = 0;
-			if (extent.y > extent.x) axis = 1;
-			if (extent.z > extent[axis]) axis = 2;
-			float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
+			// determine split axis using SAH
+			int bestAxis = -1;
+			float bestPos = 0, bestCost = 1e30f;
+			for (int axis = 0; axis < 3; axis++) for (uint i = 0; i < node.triCount; i++)
+			{
+				Tri& triangle = tri[triIdx[node.firstTriIdx + i]];
+				float candidatePos = triangle.centroid[axis];
+				float cost = EvaluateSAH(node, axis, candidatePos);
+				if (cost < bestCost)
+					bestPos = candidatePos, bestAxis = axis, bestCost = cost;
+			}
+			int axis = bestAxis;
+			float splitPos = bestPos;
 			// in-place partition
 			int i = node.firstTriIdx;
 			int j = i + node.triCount - 1;
@@ -101,6 +110,33 @@ namespace Tmpl8 {
 			Subdivide(rightChildIdx);
 		}
 
+		float EvaluateSAH(BVHNode& node, int axis, float pos)
+		{
+			// determine triangle counts and bounds for this split candidate
+			aabb leftBox, rightBox;
+			int leftCount = 0, rightCount = 0;
+			for (uint i = 0; i < node.triCount; i++)
+			{
+				Tri& triangle = tri[triIdx[node.firstTriIdx + i]];
+				if (triangle.centroid[axis] < pos)
+				{
+					leftCount++;
+					leftBox.grow(triangle.vertex0);
+					leftBox.grow(triangle.vertex1);
+					leftBox.grow(triangle.vertex2);
+				}
+				else
+				{
+					rightCount++;
+					rightBox.grow(triangle.vertex0);
+					rightBox.grow(triangle.vertex1);
+					rightBox.grow(triangle.vertex2);
+				}
+			}
+			float cost = leftCount * leftBox.area() + rightCount * rightBox.area();
+			return cost > 0 ? cost : 1e30f;
+		}
+
 		float3 GetNormalTri(const Tri& tri) const
 		{
 			const float3 edge1 = tri.vertex1 - tri.vertex0;
@@ -112,6 +148,39 @@ namespace Tmpl8 {
 		void FindNearest(Ray& ray)
 		{
 			IntersectBVH(ray, rootNodeIdx);
+		}
+
+		void IntersectBVH(Ray& ray)
+		{
+			BVHNode* node = &bvhNode[rootNodeIdx], * stack[64];
+			uint stackPtr = 0;
+			while (1)
+			{
+				if (node->isLeaf())
+				{
+					for (uint i = 0; i < node->triCount; i++)
+					{
+						if (IntersectTri(ray, tri[triIdx[node->firstTriIdx + i]]))
+							ray.objIdx = triIdx[node->firstTriIdx + i];
+					}
+					if (stackPtr == 0) break; else node = stack[--stackPtr];
+					continue;
+				}
+				BVHNode* child1 = &bvhNode[node->firstTriIdx];
+				BVHNode* child2 = &bvhNode[node->firstTriIdx + 1];
+				float dist1 = IntersectAABB(ray, child1->aabbMin, child1->aabbMax);
+				float dist2 = IntersectAABB(ray, child2->aabbMin, child2->aabbMax);
+				if (dist1 > dist2) { swap(dist1, dist2); swap(child1, child2); }
+				if (dist1 == 1e30f)
+				{
+					if (stackPtr == 0) break; else node = stack[--stackPtr];
+				}
+				else
+				{
+					node = child1;
+					if (dist2 != 1e30f) stack[stackPtr++] = child2;
+				}
+			}
 		}
 
 		void IntersectBVH(Ray& ray, const uint nodeIdx)
@@ -133,7 +202,7 @@ namespace Tmpl8 {
 			}
 		}
 
-		bool IntersectAABB(const Ray& ray, const float3 bmin, const float3 bmax)
+		float IntersectAABB(const Ray& ray, const float3 bmin, const float3 bmax)
 		{
 			float tx1 = (bmin.x - ray.O.x) / ray.D.x, tx2 = (bmax.x - ray.O.x) / ray.D.x;
 			float tmin = min(tx1, tx2), tmax = max(tx1, tx2);
@@ -141,7 +210,7 @@ namespace Tmpl8 {
 			tmin = max(tmin, min(ty1, ty2)), tmax = min(tmax, max(ty1, ty2));
 			float tz1 = (bmin.z - ray.O.z) / ray.D.z, tz2 = (bmax.z - ray.O.z) / ray.D.z;
 			tmin = max(tmin, min(tz1, tz2)), tmax = min(tmax, max(tz1, tz2));
-			return tmax >= tmin && tmin < ray.t&& tmax > 0;
+			if (tmax >= tmin && tmin < ray.t && tmax > 0) return tmin; else return 1e30f;
 		}
 
 		bool IntersectTri(Ray& ray, const Tri& tri)
