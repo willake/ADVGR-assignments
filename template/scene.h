@@ -38,7 +38,6 @@ public:
 		// we store all primitives in one continuous buffer
 		gameObjects[0] = PrimitiveFactory::GenerateQuad(0, 1, 1); // 0: light source
 		gameObjects[1] = PrimitiveFactory::GenerateSphere(1, 3, 0.5f); // 1: bouncing ball
-		//gameObjects[2] = PrimitiveFactory::GenerateSphere(2, 0, 8); // 2: rounded corners
 		gameObjects[2] = PrimitiveFactory::GenerateCube(2, 4, float3(0), float3(1.15f)); // 3: cube
 		gameObjects[3] = PrimitiveFactory::GenerateQuad(3, 5, 10, mat4::Translate(-3, 0, 1) * mat4::RotateZ(PI / 2)); // left wall
 		gameObjects[4] = PrimitiveFactory::GenerateQuad(4, 5, 10, mat4::Translate(3, 0, 0) * mat4::RotateZ(-PI / 2)); // right wall
@@ -46,14 +45,6 @@ public:
 		gameObjects[6] = PrimitiveFactory::GenerateQuad(6, 5, 10, mat4::Translate(0, 2, 0)); // roof
 		gameObjects[7] = PrimitiveFactory::GenerateQuad(7, 5, 10, mat4::Translate(0, 0, -3) * mat4::RotateX(PI / 2)); // back wall
 		gameObjects[8] = PrimitiveFactory::GenerateQuad(8, 5, 10, mat4::Translate(0, 0, 4) * mat4::RotateX(-PI / 2)); // front wall
-		/*
-		gameObjects[4] = PrimitiveFactory::GeneratePlane(4, 5, float3(1, 0, 0), 3);
-		gameObjects[5] = PrimitiveFactory::GeneratePlane(5, 5, float3(-1, 0, 0), 2.99f);
-		gameObjects[6] = PrimitiveFactory::GeneratePlane(6, 6, float3(0, 1, 0), 1);
-		gameObjects[7] = PrimitiveFactory::GeneratePlane(7, 5, float3(0, -1, 0), 2);
-		gameObjects[8] = PrimitiveFactory::GeneratePlane(8, 5, float3(0, 0, 1), 3);
-		gameObjects[9] = PrimitiveFactory::GeneratePlane(9, 7, float3(0, 0, -1), 3.99f);
-		*/
 		gameObjects[9] = PrimitiveFactory::GenerateTriangle(9, 5,
 			float3(-0.5f, -0.5f, 0), float3(0, 0.5f, 0), float3(0.5, -0.5f, 0)
 		);
@@ -80,6 +71,10 @@ public:
 		materials[7].solverId = 2;
 		// Note: once we have triangle support we should get rid of the class
 		// hierarchy: virtuals reduce performance somewhat.
+
+		for (int i = 0; i < size(gameObjects); i++) gameObjectsIdx[i] = i;
+
+		BuildBVH();
 	}
 
 	void SetTime( float t )
@@ -173,28 +168,7 @@ public:
 		}
 	}
 
-	void IntersectLight(Ray& ray)
-	{
-		PrimitiveUtils::Intersect(gameObjects[0], ray);
-	}
-	float3 GetLightPos() const
-	{
-		// light point position is the middle of the swinging quad
-		float3 corner1 = TransformPosition( float3( -0.5f, 0, -0.5f ), gameObjects[0].T);
-		float3 corner2 = TransformPosition( float3( 0.5f, 0, 0.5f ), gameObjects[0].T );
-		return (corner1 + corner2) * 0.5f - float3( 0, 0.01f, 0 );
-	}
-	float3 GetRandomPointOnLight() const
-	{
-		float randX = Rand(1.0f) - 0.5f;
-		float randY = Rand(1.0f) - 0.5f;
-		return TransformPosition(float3(randX, 0, randY), gameObjects[0].T) - float3(0, 0.01f, 0);
-	}
-	float3 GetLightColor() const
-	{
-		return float3( 8, 8, 6.4 );
-	}
-	void FindNearest( Ray& ray )
+	void FindNearest(Ray& ray)
 	{
 		// room walls - ugly shortcut for more speed
 		float t;
@@ -202,11 +176,70 @@ public:
 		//if (ray.D.y < 0) PLANE_Y( 1, 6 ) else PLANE_Y( -2, 7 );
 		//if (ray.D.z < 0) PLANE_Z( 3, 8 ) else PLANE_Z( -3.99f, 9 );
 
+		/*
 		for (int i = 0; i < size(gameObjects); i++)
 		{
 			PrimitiveUtils::Intersect(gameObjects[i], ray);
+		}*/
+
+		IntersectBVH(ray, rootNodeIdx);
+	}
+
+	void IntersectBVH(Ray& ray, const uint nodeIdx)
+	{
+		BVHNode& node = bvhNode[nodeIdx];
+		if (!IntersectAABB(ray, node.aabbMin, node.aabbMax)) return;
+		if (node.primCount > 0)
+		{
+			for (uint i = 0; i < node.primCount; i++)
+			{
+				Primitive& p = gameObjects[gameObjectsIdx[node.firstPrimIdx + i]];
+				PrimitiveUtils::Intersect(p, ray);
+			}
+		}
+		else
+		{
+			IntersectBVH(ray, node.leftNode);
+			IntersectBVH(ray, node.leftNode + 1);
 		}
 	}
+
+	bool IntersectAABB(const Ray& ray, const float3 bmin, const float3 bmax)
+	{
+		float tx1 = (bmin.x - ray.O.x) / ray.D.x, tx2 = (bmax.x - ray.O.x) / ray.D.x;
+		float tmin = min(tx1, tx2), tmax = max(tx1, tx2);
+		float ty1 = (bmin.y - ray.O.y) / ray.D.y, ty2 = (bmax.y - ray.O.y) / ray.D.y;
+		tmin = max(tmin, min(ty1, ty2)), tmax = min(tmax, max(ty1, ty2));
+		float tz1 = (bmin.z - ray.O.z) / ray.D.z, tz2 = (bmax.z - ray.O.z) / ray.D.z;
+		tmin = max(tmin, min(tz1, tz2)), tmax = min(tmax, max(tz1, tz2));
+		return tmax >= tmin && tmin < ray.t&& tmax > 0;
+	}
+
+	void IntersectLight(Ray& ray)
+	{
+		PrimitiveUtils::Intersect(gameObjects[0], ray);
+	}
+
+	float3 GetLightPos() const
+	{
+		// light point position is the middle of the swinging quad
+		float3 corner1 = TransformPosition( float3( -0.5f, 0, -0.5f ), gameObjects[0].T);
+		float3 corner2 = TransformPosition( float3( 0.5f, 0, 0.5f ), gameObjects[0].T );
+		return (corner1 + corner2) * 0.5f - float3( 0, 0.01f, 0 );
+	}
+
+	float3 GetRandomPointOnLight() const
+	{
+		float randX = Rand(1.0f) - 0.5f;
+		float randY = Rand(1.0f) - 0.5f;
+		return TransformPosition(float3(randX, 0, randY), gameObjects[0].T) - float3(0, 0.01f, 0);
+	}
+
+	float3 GetLightColor() const
+	{
+		return float3( 8, 8, 6.4 );
+	}
+
 	bool IsOccluded( Ray& ray )
 	{
 		float rayLength = ray.t;
