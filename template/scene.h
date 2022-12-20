@@ -45,6 +45,14 @@ public:
 		gameObjects[6] = PrimitiveFactory::GenerateQuad(6, 5, 20, mat4::Translate(0, 4, 0)); // roof
 		gameObjects[7] = PrimitiveFactory::GenerateQuad(7, 5, 20, mat4::Translate(0, 0, -7) * mat4::RotateX(PI / 2)); // back wall
 		gameObjects[8] = PrimitiveFactory::GenerateQuad(8, 5, 20, mat4::Translate(0, 0, 7) * mat4::RotateX(-PI / 2)); // front wall
+
+		for (int i = 9; i < 9 + 50; i++)
+		{
+			mat4 T = mat4::Translate(float3(
+				RandomFloat() * 10 - 5, RandomFloat() * 3, RandomFloat() * 10 - 5
+			));
+			gameObjects[i] = PrimitiveFactory::GenerateSphere(i, 5, 0.2f, T);
+		}
 		/*gameObjects[9] = PrimitiveFactory::GenerateTriangle(3, 5,
 			float3(-0.5f, -0.5f, 0), float3(0, 0.5f, 0), float3(0.5, -0.5f, 0)
 		); */
@@ -176,13 +184,13 @@ public:
 		//if (ray.D.y < 0) PLANE_Y( 1, 6 ) else PLANE_Y( -2, 7 );
 		//if (ray.D.z < 0) PLANE_Z( 3, 8 ) else PLANE_Z( -3.99f, 9 );
 
-		/*
+		
 		for (int i = 0; i < size(gameObjects); i++)
 		{
 			PrimitiveUtils::Intersect(gameObjects[i], ray);
-		}*/
+		}
 
-		IntersectBVH(ray, rootNodeIdx);
+		//IntersectBVH(ray, rootNodeIdx);
 	}
 
 	void IntersectBVH(Ray& ray, const uint nodeIdx)
@@ -284,10 +292,10 @@ public:
 	}
 	__declspec(align(64)) // start a new cacheline here
 	float animTime = 0;
-	Primitive gameObjects[9];
+	Primitive gameObjects[59];
 	Material materials[8];
-	BVHNode bvhNode[9];
-	uint gameObjectsIdx[9];
+	BVHNode bvhNode[59];
+	uint gameObjectsIdx[59];
 	uint rootNodeIdx = 0, nodesUsed = 1;
 };
 
