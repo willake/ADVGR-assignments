@@ -5,6 +5,7 @@ namespace Tmpl8 {
 	struct Primitive {
 	public:
 		int objIdx;
+		int matIdx;
 		int type; // 0 triangle, 1 shpere, 2 plane, 3 cube, 4 quad
 		Tri tri;
 		mat4 T, invT;
@@ -206,10 +207,11 @@ namespace Tmpl8 {
 
 	class PrimitiveFactory {
 	public:
-		static Primitive GenerateTriangle(int objId, float3 vertex0, float3 vertex1, float3 vertex2, mat4 transform = mat4::Identity()) 
+		static Primitive GenerateTriangle(int objId, int matIdx, float3 vertex0, float3 vertex1, float3 vertex2, mat4 transform = mat4::Identity()) 
 		{
 			Primitive primitive;
 			primitive.objIdx = objId;
+			primitive.matIdx = matIdx;
 			primitive.type = 0;
 			primitive.tri.vertex0 = vertex0;
 			primitive.tri.vertex1 = vertex1;
@@ -218,10 +220,11 @@ namespace Tmpl8 {
 			return primitive;
 		}
 
-		static Primitive GenerateSphere(int objId, float3 pos, float r, mat4 transform = mat4::Identity()) 
+		static Primitive GenerateSphere(int objId, int matIdx, float3 pos, float r, mat4 transform = mat4::Identity())
 		{
 			Primitive primitive;
 			primitive.objIdx = objId;
+			primitive.matIdx = matIdx;
 			primitive.type = 1;
 			primitive.tri.vertex0 = pos;
 			primitive.tri.vertex1.x = r;
@@ -231,10 +234,11 @@ namespace Tmpl8 {
 			return primitive;
 		}
 
-		static Primitive GeneratePlane(int objId, float3 normal, float dist, mat4 transform = mat4::Identity()) 
+		static Primitive GeneratePlane(int objId, int matIdx, float3 normal, float dist, mat4 transform = mat4::Identity())
 		{
 			Primitive primitive;
 			primitive.objIdx = objId;
+			primitive.matIdx = matIdx;
 			primitive.type = 2;
 			primitive.tri.vertex0 = normal;
 			primitive.tri.vertex1.x = dist;
@@ -242,10 +246,11 @@ namespace Tmpl8 {
 			return primitive;
 		}
 
-		static Primitive GenerateCube(int objId, float3 pos, float3 size, mat4 transform = mat4::Identity()) 
+		static Primitive GenerateCube(int objId, int matIdx, float3 pos, float3 size, mat4 transform = mat4::Identity())
 		{
 			Primitive primitive;
 			primitive.objIdx = objId;
+			primitive.matIdx = matIdx;
 			primitive.type = 3;
 			primitive.tri.vertex0 = pos - 0.5f * size;
 			primitive.tri.vertex1 = pos + 0.5f * size;
@@ -253,10 +258,11 @@ namespace Tmpl8 {
 			return primitive;
 		}
 
-		static Primitive GenerateQuad(int objId, float s, mat4 transform = mat4::Identity()) 
+		static Primitive GenerateQuad(int objId, int matIdx, float s, mat4 transform = mat4::Identity())
 		{
 			Primitive primitive;
 			primitive.objIdx = objId;
+			primitive.matIdx = matIdx;
 			primitive.type = 4;
 			primitive.tri.vertex0.x = s * 0.5f;
 			primitive.T = transform, primitive.invT = transform.FastInvertedTransformNoScale();

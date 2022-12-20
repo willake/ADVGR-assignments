@@ -36,45 +36,40 @@ public:
 	Scene()
 	{
 		// we store all primitives in one continuous buffer
-		gameObjects[0] = PrimitiveFactory::GenerateQuad(0, 1); // 0: light source
-		gameObjects[1] = PrimitiveFactory::GenerateSphere(1, float3(0), 0.5f); // 1: bouncing ball
-		gameObjects[2] = PrimitiveFactory::GenerateSphere(2, float3(0, 2.5f, -3.07f), 8); // 2: rounded corners
-		gameObjects[3] = PrimitiveFactory::GenerateCube(3, float3(0), float3(1.15f)); // 3: cube
-		gameObjects[4] = PrimitiveFactory::GeneratePlane(4, float3(1, 0, 0), 3);
-		gameObjects[5] = PrimitiveFactory::GeneratePlane(5, float3(-1, 0, 0), 2.99f);
-		gameObjects[6] = PrimitiveFactory::GeneratePlane(6, float3(0, 1, 0), 1);
-		gameObjects[7] = PrimitiveFactory::GeneratePlane(7, float3(0, -1, 0), 2);
-		gameObjects[8] = PrimitiveFactory::GeneratePlane(8, float3(0, 0, 1), 3);
-		gameObjects[9] = PrimitiveFactory::GeneratePlane(9, float3(0, 0, -1), 3.99f);
-		gameObjects[10] = PrimitiveFactory::GenerateTriangle(10,
+		gameObjects[0] = PrimitiveFactory::GenerateQuad(0, 1, 1); // 0: light source
+		gameObjects[1] = PrimitiveFactory::GenerateSphere(1, 3, float3(0), 0.5f); // 1: bouncing ball
+		gameObjects[2] = PrimitiveFactory::GenerateSphere(2, 0, float3(0, 2.5f, -3.07f), 8); // 2: rounded corners
+		gameObjects[3] = PrimitiveFactory::GenerateCube(3, 4, float3(0), float3(1.15f)); // 3: cube
+		gameObjects[4] = PrimitiveFactory::GeneratePlane(4, 5, float3(1, 0, 0), 3);
+		gameObjects[5] = PrimitiveFactory::GeneratePlane(5, 5, float3(-1, 0, 0), 2.99f);
+		gameObjects[6] = PrimitiveFactory::GeneratePlane(6, 6, float3(0, 1, 0), 1);
+		gameObjects[7] = PrimitiveFactory::GeneratePlane(7, 5, float3(0, -1, 0), 2);
+		gameObjects[8] = PrimitiveFactory::GeneratePlane(8, 5, float3(0, 0, 1), 3);
+		gameObjects[9] = PrimitiveFactory::GeneratePlane(9, 7, float3(0, 0, -1), 3.99f);
+		gameObjects[10] = PrimitiveFactory::GenerateTriangle(10, 0,
 			float3(-0.5f, -0.5f, 0), float3(0, 0.5f, 0), float3(0.5, -0.5f, 0)
 		);
 		SetTime( 0 );
-
-		lightMaterial = Material();
-		lightMaterial.isLight = true;
-
-		errorMaterial = Material(); // for error
-		errorMaterial.color = float3(240 / 255.f, 98 / 255.f, 146 / 255.f);
-
-		whiteMaterial = Material();
-
-		ballMaterial = Material();
-		ballMaterial.isMirror = true;
-		ballMaterial.color = float3(233 / 255.f, 199 / 255.f, 199 / 255.f);
-
-		cubeMaterial = Material();
-		cubeMaterial.isGlass = true;
-		cubeMaterial.color = float3(103 / 255.f, 137 / 255.f, 131 / 255.f);
-
-		planeMaterial = Material();
-		planeMaterial.color = float3(.8f);
-
-		floorMaterial = FloorMaterial();
-		floorMaterial.isMirror = true;
-		floorMaterial.reflectivity = 0.3f;
-
-		backWallMaterial = BackWallMaterial();
+		// error material
+		materials[0].color = float3(240 / 255.f, 98 / 255.f, 146 / 255.f);
+		// light material
+		materials[1].isLight = true; // light material
+		// white material
+		materials[2].color = float3(1);
+		// ball material
+		materials[3].isMirror = true;
+		materials[3].color = float3(233 / 255.f, 199 / 255.f, 199 / 255.f);
+		// cube material
+		materials[4].isGlass = true;
+		materials[4].color = float3(103 / 255.f, 137 / 255.f, 131 / 255.f);
+		// plane material
+		materials[5].color = float3(.8f);
+		// floor material
+		materials[6].solverId = 1;
+		materials[6].isMirror = true;
+		materials[6].reflectivity = 0.3f;
+		// back wall material
+		materials[7].solverId = 2;
 		// Note: once we have triangle support we should get rid of the class
 		// hierarchy: virtuals reduce performance somewhat.
 	}
@@ -94,6 +89,10 @@ public:
 		// sphere animation: bounce
 		float tm = 1 - sqrf( fmodf( animTime, 2.0f ) - 1 );
 		gameObjects[1].tri.vertex0 = float3(-1.4f, -0.5f + tm, 2);
+	}
+	void IntersectLight(Ray& ray)
+	{
+		PrimitiveUtils::Intersect(gameObjects[0], ray);
 	}
 	float3 GetLightPos() const
 	{
@@ -150,42 +149,27 @@ public:
 	}
 	Material GetMaterial( int objIdx ) const
 	{
-		if (objIdx == -1) return errorMaterial; // or perhaps we should just crash
-		if (objIdx == 0) return lightMaterial; // light source
-		if (objIdx == 1) return ballMaterial; // bouncing ball
-		if (objIdx == 2) return whiteMaterial; // corner
-		if (objIdx == 3) return cubeMaterial; // cube
-		if (objIdx == 6) return floorMaterial;
-		if (objIdx == 9) return backWallMaterial;
-		if (objIdx == 10) return whiteMaterial;
-		return planeMaterial;
+		if (objIdx == -1) return materials[0]; // or perhaps we should just crash
+		
+		int matIdx = gameObjects[objIdx].matIdx;
+		return materials[matIdx];
 	}
 
 	float3 GetAlbedo( int objIdx, float3 I ) const
 	{
-		if (objIdx == -1) return errorMaterial.GetAlbedo(I); // or perhaps we should just crash
-		if (objIdx == 0) return lightMaterial.GetAlbedo(I); // light source
-		if (objIdx == 1) return ballMaterial.GetAlbedo(I); // bouncing ball
-		if (objIdx == 2) return whiteMaterial.GetAlbedo(I); // corner
-		if (objIdx == 3) return cubeMaterial.GetAlbedo(I); // cube
-		if (objIdx == 6) return floorMaterial.GetAlbedo(I);
-		if (objIdx == 9) return backWallMaterial.GetAlbedo(I);
-		if (objIdx == 10) return whiteMaterial.GetAlbedo(I);
-		return planeMaterial.GetAlbedo(I);
+		Material mat = materials[0];
+		if (objIdx == -1) return MaterialUtils::GetAlbedo(mat, I); // or perhaps we should just crash
+		int matIdx = gameObjects[objIdx].matIdx;
+		mat = materials[matIdx];
+
+		return MaterialUtils::GetAlbedo(mat, I);
 		// once we have triangle support, we should pass objIdx and the bary-
 		// centric coordinates of the hit, instead of the intersection location.
 	}
 	__declspec(align(64)) // start a new cacheline here
 	float animTime = 0;
 	Primitive gameObjects[11];
-	Material lightMaterial;
-	Material errorMaterial; // for error
-	Material whiteMaterial;
-	Material ballMaterial;
-	Material cubeMaterial;
-	Material planeMaterial;
-	FloorMaterial floorMaterial;
-	BackWallMaterial backWallMaterial;
+	Material materials[8];
 };
 
 }
