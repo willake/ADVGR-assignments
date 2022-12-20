@@ -37,16 +37,19 @@ public:
 	{
 		// we store all primitives in one continuous buffer
 		gameObjects[0] = PrimitiveFactory::GenerateQuad(0, 1, 1); // 0: light source
-		gameObjects[1] = PrimitiveFactory::GenerateSphere(1, 3, float3(0), 0.5f); // 1: bouncing ball
-		gameObjects[2] = PrimitiveFactory::GenerateSphere(2, 0, float3(0, 2.5f, -3.07f), 8); // 2: rounded corners
-		gameObjects[3] = PrimitiveFactory::GenerateCube(3, 4, float3(0), float3(1.15f)); // 3: cube
+		gameObjects[1] = PrimitiveFactory::GenerateSphere(1, 3, 0.5f); // 1: bouncing ball
+		//gameObjects[2] = PrimitiveFactory::GenerateSphere(2, 0, 8); // 2: rounded corners
+		gameObjects[2] = PrimitiveFactory::GenerateCube(3, 4, float3(0), float3(1.15f)); // 3: cube
+		gameObjects[3] = PrimitiveFactory::GenerateQuad(0, 6, 4);
+		/*
 		gameObjects[4] = PrimitiveFactory::GeneratePlane(4, 5, float3(1, 0, 0), 3);
 		gameObjects[5] = PrimitiveFactory::GeneratePlane(5, 5, float3(-1, 0, 0), 2.99f);
 		gameObjects[6] = PrimitiveFactory::GeneratePlane(6, 6, float3(0, 1, 0), 1);
 		gameObjects[7] = PrimitiveFactory::GeneratePlane(7, 5, float3(0, -1, 0), 2);
 		gameObjects[8] = PrimitiveFactory::GeneratePlane(8, 5, float3(0, 0, 1), 3);
 		gameObjects[9] = PrimitiveFactory::GeneratePlane(9, 7, float3(0, 0, -1), 3.99f);
-		gameObjects[10] = PrimitiveFactory::GenerateTriangle(10, 0,
+		*/
+		gameObjects[4] = PrimitiveFactory::GenerateTriangle(10, 0,
 			float3(-0.5f, -0.5f, 0), float3(0, 0.5f, 0), float3(0.5, -0.5f, 0)
 		);
 		SetTime( 0 );
@@ -73,6 +76,7 @@ public:
 		// Note: once we have triangle support we should get rid of the class
 		// hierarchy: virtuals reduce performance somewhat.
 	}
+
 	void SetTime( float t )
 	{
 		// default time for the scene is simply 0. Updating/ the time per frame 
@@ -88,8 +92,81 @@ public:
 		gameObjects[3].T = M2, gameObjects[3].invT = M2.FastInvertedTransformNoScale();
 		// sphere animation: bounce
 		float tm = 1 - sqrf( fmodf( animTime, 2.0f ) - 1 );
-		gameObjects[1].tri.vertex0 = float3(-1.4f, -0.5f + tm, 2);
+		mat4 M3base = mat4::Translate(float3(-1.4f, -0.5f, 2) );
+		mat4 M3 = M3base * mat4::Translate(0, tm, 0);
+		gameObjects[1].T = M3, gameObjects[1].invT = M3.FastInvertedTransformNoScale();
 	}
+
+	void BuildBVH()
+	{
+		
+		//for (int i = 0; i < N; i++) tri[i].centroid =
+		//	(tri[i].vertex0 + tri[i].vertex1 + tri[i].vertex2) * 0.3333f;
+		// assign all triangles to root node
+		
+		BVHNode& root = bvhNode[rootNodeIdx];
+		root.leftNode = 0;
+		root.firstPrimIdx = 0, root.primCount = size(gameObjects);
+		UpdateNodeBounds(rootNodeIdx);
+		// subdivide recursively
+		Subdivide(rootNodeIdx);
+	}
+
+	void Subdivide(uint nodeIdx)
+	{
+		// terminate recursion
+		BVHNode& node = bvhNode[nodeIdx];
+		if (node.primCount <= 2) return;
+		// determine split axis and position
+		float3 extent = node.aabbMax - node.aabbMin;
+		int axis = 0;
+		if (extent.y > extent.x) axis = 1;
+		if (extent.z > extent[axis]) axis = 2;
+		float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
+		// in-place partition
+		int i = node.firstPrimIdx;
+		int j = i + node.primCount - 1;
+		while (i <= j)
+		{
+			if (gameObjects[gameObjectsIdx[i]].tri.centroid[axis] < splitPos)
+				i++;
+			else
+				swap(gameObjectsIdx[i], gameObjectsIdx[j--]);
+		}
+		// abort split if one of the sides is empty
+		int leftCount = i - node.firstPrimIdx;
+		if (leftCount == 0 || leftCount == node.primCount) return;
+		// create child nodes
+		int leftChildIdx = nodesUsed++;
+		int rightChildIdx = nodesUsed++;
+		node.leftNode = leftChildIdx;
+		bvhNode[leftChildIdx].firstPrimIdx = node.firstPrimIdx;
+		bvhNode[leftChildIdx].primCount = leftCount;
+		bvhNode[rightChildIdx].firstPrimIdx = i;
+		bvhNode[rightChildIdx].primCount = node.primCount - leftCount;
+		node.primCount = 0;
+		UpdateNodeBounds(leftChildIdx);
+		UpdateNodeBounds(rightChildIdx);
+		// recurse
+		Subdivide(leftChildIdx);
+		Subdivide(rightChildIdx);
+	}
+
+	void UpdateNodeBounds(uint nodeIdx)
+	{
+		BVHNode& node = bvhNode[nodeIdx];
+		node.aabbMin = float3(1e30f);
+		node.aabbMax = float3(-1e30f);
+		for (uint first = node.firstPrimIdx, i = 0; i < node.primCount; i++)
+		{
+			uint leafTriIdx = gameObjectsIdx[first + i];
+			Primitive& leafPrim = gameObjects[leafTriIdx];
+			AABB bounds = PrimitiveUtils::GetBounds(leafPrim);
+			node.aabbMin = fminf(node.aabbMin, bounds.bmin);
+			node.aabbMax = fmaxf(node.aabbMax, bounds.bmax);
+		}
+	}
+
 	void IntersectLight(Ray& ray)
 	{
 		PrimitiveUtils::Intersect(gameObjects[0], ray);
@@ -168,8 +245,11 @@ public:
 	}
 	__declspec(align(64)) // start a new cacheline here
 	float animTime = 0;
-	Primitive gameObjects[11];
+	Primitive gameObjects[5];
 	Material materials[8];
+	BVHNode bvhNode[5];
+	uint gameObjectsIdx[5];
+	uint rootNodeIdx = 0, nodesUsed = 1;
 };
 
 }

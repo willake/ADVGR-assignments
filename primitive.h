@@ -13,21 +13,39 @@ namespace Tmpl8 {
 
 	class PrimitiveUtils {
 	public:
+		static AABB GetBounds(Primitive& p)
+		{
+			switch (p.type)
+			{
+				case 0:
+				default:
+					return GetBoundsTriangle(p);
+				case 1:
+					return GetBoundsSphere(p);
+				case 2:
+					return GetBoundsPlane(p);
+				case 3:
+					return GetBoundsCube(p);
+				case 4:
+					return GetBoundsQuad(p);
+			}
+		}
+
 		static float3 GetNormal(Primitive& p, float3 I) 
 		{
 			switch (p.type)
 			{
-			case 0:
-			default:
-				return GetNormalTriangle(p);
-			case 1:
-				return GetNormalSphere(p, I);
-			case 2:
-				return GetNormalPlane(p);
-			case 3:
-				return GetNormalCube(p, I);
-			case 4:
-				return GetNormalQuad(p);
+				case 0:
+				default:
+					return GetNormalTriangle(p);
+				case 1:
+					return GetNormalSphere(p, I);
+				case 2:
+					return GetNormalPlane(p);
+				case 3:
+					return GetNormalCube(p, I);
+				case 4:
+					return GetNormalQuad(p);
 			}
 		}
 
@@ -52,6 +70,62 @@ namespace Tmpl8 {
 					IntersectQuad(p, ray);
 					break;
 			}
+		}
+
+		static inline AABB GetBoundsTriangle(Primitive& p)
+		{
+			AABB aabb;
+			Tri& tri = p.tri;
+			aabb.grow(tri.vertex0);
+			aabb.grow(tri.vertex1);
+			aabb.grow(tri.vertex2);
+
+			return aabb;
+		}
+
+		static inline AABB GetBoundsSphere(Primitive& p)
+		{
+			AABB aabb;
+			Tri& tri = p.tri;
+			float3 min = tri.vertex0 - float3(tri.vertex1.x);
+			float3 max = tri.vertex0 + float3(tri.vertex1.x);
+			aabb.grow(min);
+			aabb.grow(max);
+
+			return aabb;
+		}
+
+		static inline AABB GetBoundsPlane(Primitive& p)
+		{
+			AABB aabb;
+
+			return aabb;
+		}
+
+		static inline AABB GetBoundsCube(Primitive& p)
+		{
+			AABB aabb;
+			Tri& tri = p.tri;
+
+			float3 min = TransformPosition(tri.vertex0, p.T);
+			float3 max = TransformPosition(tri.vertex1, p.T);
+			aabb.grow(min);
+			aabb.grow(max);
+
+			return aabb;
+		}
+
+		static inline AABB GetBoundsQuad(Primitive& p)
+		{
+			AABB aabb;
+			Tri& tri = p.tri;
+			float s = tri.vertex0.x;
+			float3 min = TransformPosition(float3(-s, 0, -s), p.T);
+			float3 max = TransformPosition(float3(s, 0, s), p.T);
+			aabb.grow(min);
+			aabb.grow(max);
+
+			return aabb;
 		}
 
 		static inline void IntersectTriangle(Primitive& p, Ray& ray)
@@ -86,8 +160,9 @@ namespace Tmpl8 {
 		static inline void IntersectSphere(Primitive& p, Ray& ray)
 		{
 			Tri& tri = p.tri;
-			float3 oc = ray.O - tri.vertex0;
-			float r2 = tri.vertex1.y;
+			float3 pos = TransformPosition(float3(0), p.T);
+			float3 oc = ray.O - pos;
+			float r2 = tri.vertex0.y;
 			float b = dot(oc, ray.D);
 			float c = dot(oc, oc) - r2;
 			float t, d = b * b - c;
@@ -171,7 +246,8 @@ namespace Tmpl8 {
 
 		static inline float3 GetNormalSphere(Primitive& p, float3 I)
 		{
-			return (I - p.tri.vertex0) * p.tri.vertex1.z;
+			float3 pos = TransformPosition(float3(0), p.T);
+			return (I - pos) * p.tri.vertex0.z;
 		}
 
 		static inline float3 GetNormalPlane(Primitive& p)
@@ -220,16 +296,15 @@ namespace Tmpl8 {
 			return primitive;
 		}
 
-		static Primitive GenerateSphere(int objId, int matIdx, float3 pos, float r, mat4 transform = mat4::Identity())
+		static Primitive GenerateSphere(int objId, int matIdx, float r, mat4 transform = mat4::Identity())
 		{
 			Primitive primitive;
 			primitive.objIdx = objId;
 			primitive.matIdx = matIdx;
 			primitive.type = 1;
-			primitive.tri.vertex0 = pos;
-			primitive.tri.vertex1.x = r;
-			primitive.tri.vertex1.y = r * r; // r2
-			primitive.tri.vertex1.z = 1 / r; // invr
+			primitive.tri.vertex0.x = r;
+			primitive.tri.vertex0.y = r * r; // r2
+			primitive.tri.vertex0.z = 1 / r; // invr
 			primitive.T = transform, primitive.invT = transform.FastInvertedTransformNoScale();
 			return primitive;
 		}
