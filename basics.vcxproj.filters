@@ -27,6 +27,12 @@
     <ClInclude Include="path_trace_module.h">
       <Filter>renderer_module</Filter>
     </ClInclude>
+    <ClInclude Include="primitive.h">
+      <Filter>template</Filter>
+    </ClInclude>
+    <ClInclude Include="ray.h">
+      <Filter>template</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

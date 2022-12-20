@@ -1647,6 +1647,8 @@ public:
 	Surface* screen = 0;
 };
 
+#include "ray.h"
+#include "primitive.h"
 #include "material.h"
 #include "scene.h"
 #include "camera.h"
