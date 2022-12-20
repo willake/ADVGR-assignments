@@ -78,7 +78,8 @@ public:
 		float3 L = normalize(lightPos - I);
 		Ray shadowRay = Ray(I + (L * 0.001f), L);
 
-		scene.quad.Intersect(shadowRay);
+		//scene.quad.Intersect(shadowRay);
+		scene.IntersectLight(shadowRay);
 
 		if (scene.IsOccluded(shadowRay)) return float3(0);
 
