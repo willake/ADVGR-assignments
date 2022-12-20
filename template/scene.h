@@ -39,15 +39,15 @@ public:
 		gameObjects[0] = PrimitiveFactory::GenerateQuad(0, 1, 1); // 0: light source
 		gameObjects[1] = PrimitiveFactory::GenerateSphere(1, 3, 0.5f); // 1: bouncing ball
 		gameObjects[2] = PrimitiveFactory::GenerateCube(2, 4, float3(0), float3(1.15f)); // 3: cube
-		gameObjects[3] = PrimitiveFactory::GenerateQuad(3, 5, 10, mat4::Translate(-3, 0, 1) * mat4::RotateZ(PI / 2)); // left wall
-		gameObjects[4] = PrimitiveFactory::GenerateQuad(4, 5, 10, mat4::Translate(3, 0, 0) * mat4::RotateZ(-PI / 2)); // right wall
-		gameObjects[5] = PrimitiveFactory::GenerateQuad(5, 6, 10, mat4::Translate(0, -1, 0)); // floor
-		gameObjects[6] = PrimitiveFactory::GenerateQuad(6, 5, 10, mat4::Translate(0, 2, 0)); // roof
-		gameObjects[7] = PrimitiveFactory::GenerateQuad(7, 5, 10, mat4::Translate(0, 0, -3) * mat4::RotateX(PI / 2)); // back wall
-		gameObjects[8] = PrimitiveFactory::GenerateQuad(8, 5, 10, mat4::Translate(0, 0, 4) * mat4::RotateX(-PI / 2)); // front wall
-		gameObjects[9] = PrimitiveFactory::GenerateTriangle(9, 5,
+		gameObjects[3] = PrimitiveFactory::GenerateQuad(3, 5, 20, mat4::Translate(-7, 0, 1) * mat4::RotateZ(PI / 2)); // left wall
+		gameObjects[4] = PrimitiveFactory::GenerateQuad(4, 5, 20, mat4::Translate(7, 0, 0) * mat4::RotateZ(-PI / 2)); // right wall
+		gameObjects[5] = PrimitiveFactory::GenerateQuad(5, 6, 20, mat4::Translate(0, -1, 0)); // floor
+		gameObjects[6] = PrimitiveFactory::GenerateQuad(6, 5, 20, mat4::Translate(0, 4, 0)); // roof
+		gameObjects[7] = PrimitiveFactory::GenerateQuad(7, 5, 20, mat4::Translate(0, 0, -7) * mat4::RotateX(PI / 2)); // back wall
+		gameObjects[8] = PrimitiveFactory::GenerateQuad(8, 5, 20, mat4::Translate(0, 0, 7) * mat4::RotateX(-PI / 2)); // front wall
+		/*gameObjects[9] = PrimitiveFactory::GenerateTriangle(3, 5,
 			float3(-0.5f, -0.5f, 0), float3(0, 0.5f, 0), float3(0.5, -0.5f, 0)
-		);
+		); */
 		SetTime( 0 );
 		// error material
 		materials[0].color = float3(240 / 255.f, 98 / 255.f, 146 / 255.f);
@@ -83,7 +83,7 @@ public:
 		// enables animation. Updating it per ray can be used for motion blur.
 		animTime = t;
 		// light source animation: swing
-		mat4 M1base = mat4::Translate( float3( 0, 2.6f, 2 ) );
+		mat4 M1base = mat4::Translate( float3( 0, 4.6f, 2 ) );
 		mat4 M1 = M1base * mat4::RotateZ( sinf( animTime * 0.6f ) * 0.1f ) * mat4::Translate( float3( 0, -0.9, 0 ) );
 		gameObjects[0].T = M1, gameObjects[0].invT = M1.FastInvertedTransformNoScale();
 		// cube animation: spin
@@ -284,10 +284,10 @@ public:
 	}
 	__declspec(align(64)) // start a new cacheline here
 	float animTime = 0;
-	Primitive gameObjects[10];
+	Primitive gameObjects[9];
 	Material materials[8];
-	BVHNode bvhNode[10];
-	uint gameObjectsIdx[10];
+	BVHNode bvhNode[9];
+	uint gameObjectsIdx[9];
 	uint rootNodeIdx = 0, nodesUsed = 1;
 };
 

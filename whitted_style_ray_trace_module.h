@@ -11,7 +11,7 @@ public:
 	float3 Trace(Ray& ray, int depth)
 	{
 		scene.FindNearest(ray);
-		if (ray.objIdx == -1) return 0; // or a fancy sky color
+		if (ray.objIdx == -1) return float3(195 / 255.0f, 251 / 255.0f, 249 / 255.0f); // or a fancy sky color
 		float3 I = ray.O + ray.t * ray.D;
 		float3 N = scene.GetNormal(ray.objIdx, I, ray.D);
 		Material material = scene.GetMaterial(ray.objIdx);
@@ -43,20 +43,17 @@ public:
 			float Rp = ((n1 * cosI) - (n2 * cosT)) / ((n1 * cosI) + (n2 * cosT));
 
 			float Fr = ((Rs * Rs) + (Rp * Rp)) / 2;
-			//float Ft = 1 - Fr;
+			float Ft = 1 - Fr;
 
 			float p = Rand(1);
 
-			if (p > Fr)
-			{
-				float3 reflectDirection = reflect(ray.D, N);
-				return albedo * Trace(Ray(I + reflectDirection * 0.001f, reflectDirection), depth + 1);
-			}
-			else
-			{
-				float3 refractDirection = (n1DividedByn2 * ray.D) + (N * ((n1DividedByn2 * cosI) - sqrt(k)));
-				return albedo * Trace(Ray(I + (refractDirection * 0.001f), refractDirection), depth + 1);
-			}
+			float3 reflectDirection = reflect(ray.D, N);
+			float3 reflection = albedo * Trace(Ray(I + reflectDirection * 0.001f, reflectDirection), depth + 1);
+
+			float3 refractDirection = (n1DividedByn2 * ray.D) + (N * ((n1DividedByn2 * cosI) - sqrt(k)));
+			float3 refraction = albedo * Trace(Ray(I + (refractDirection * 0.001f), refractDirection), depth + 1);
+
+			return Fr * reflection + Ft * refraction;
 		}
 
 		// reflection

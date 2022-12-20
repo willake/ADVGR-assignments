@@ -104,7 +104,7 @@ public:
 	}
 
 	int depthLimit = 5;
-	int sampleCount = 10;
+	int sampleCount = 5;
 	bool isInitialized = false;
 	Scene scene;
 };
