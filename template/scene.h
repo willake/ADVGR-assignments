@@ -39,8 +39,13 @@ public:
 		gameObjects[0] = PrimitiveFactory::GenerateQuad(0, 1, 1); // 0: light source
 		gameObjects[1] = PrimitiveFactory::GenerateSphere(1, 3, 0.5f); // 1: bouncing ball
 		//gameObjects[2] = PrimitiveFactory::GenerateSphere(2, 0, 8); // 2: rounded corners
-		gameObjects[2] = PrimitiveFactory::GenerateCube(3, 4, float3(0), float3(1.15f)); // 3: cube
-		gameObjects[3] = PrimitiveFactory::GenerateQuad(0, 6, 4);
+		gameObjects[2] = PrimitiveFactory::GenerateCube(2, 4, float3(0), float3(1.15f)); // 3: cube
+		gameObjects[3] = PrimitiveFactory::GenerateQuad(3, 5, 10, mat4::Translate(-3, 0, 1) * mat4::RotateZ(PI / 2)); // left wall
+		gameObjects[4] = PrimitiveFactory::GenerateQuad(4, 5, 10, mat4::Translate(3, 0, 0) * mat4::RotateZ(-PI / 2)); // right wall
+		gameObjects[5] = PrimitiveFactory::GenerateQuad(5, 6, 10, mat4::Translate(0, -1, 0)); // floor
+		gameObjects[6] = PrimitiveFactory::GenerateQuad(6, 5, 10, mat4::Translate(0, 2, 0)); // roof
+		gameObjects[7] = PrimitiveFactory::GenerateQuad(7, 5, 10, mat4::Translate(0, 0, -3) * mat4::RotateX(PI / 2)); // back wall
+		gameObjects[8] = PrimitiveFactory::GenerateQuad(8, 5, 10, mat4::Translate(0, 0, 4) * mat4::RotateX(-PI / 2)); // front wall
 		/*
 		gameObjects[4] = PrimitiveFactory::GeneratePlane(4, 5, float3(1, 0, 0), 3);
 		gameObjects[5] = PrimitiveFactory::GeneratePlane(5, 5, float3(-1, 0, 0), 2.99f);
@@ -49,7 +54,7 @@ public:
 		gameObjects[8] = PrimitiveFactory::GeneratePlane(8, 5, float3(0, 0, 1), 3);
 		gameObjects[9] = PrimitiveFactory::GeneratePlane(9, 7, float3(0, 0, -1), 3.99f);
 		*/
-		gameObjects[4] = PrimitiveFactory::GenerateTriangle(10, 0,
+		gameObjects[9] = PrimitiveFactory::GenerateTriangle(9, 5,
 			float3(-0.5f, -0.5f, 0), float3(0, 0.5f, 0), float3(0.5, -0.5f, 0)
 		);
 		SetTime( 0 );
@@ -89,7 +94,7 @@ public:
 		// cube animation: spin
 		mat4 M2base = mat4::RotateX( PI / 4 ) * mat4::RotateZ( PI / 4 );
 		mat4 M2 = mat4::Translate( float3( 1.4f, 0, 2 ) ) * mat4::RotateY( animTime * 0.5f ) * M2base;
-		gameObjects[3].T = M2, gameObjects[3].invT = M2.FastInvertedTransformNoScale();
+		gameObjects[2].T = M2, gameObjects[2].invT = M2.FastInvertedTransformNoScale();
 		// sphere animation: bounce
 		float tm = 1 - sqrf( fmodf( animTime, 2.0f ) - 1 );
 		mat4 M3base = mat4::Translate(float3(-1.4f, -0.5f, 2) );
@@ -128,7 +133,8 @@ public:
 		int j = i + node.primCount - 1;
 		while (i <= j)
 		{
-			if (gameObjects[gameObjectsIdx[i]].tri.centroid[axis] < splitPos)
+			float3 pos = TransformPosition(float3(0), gameObjects[gameObjectsIdx[i]].T);
+			if (pos[axis] < splitPos)
 				i++;
 			else
 				swap(gameObjectsIdx[i], gameObjectsIdx[j--]);
@@ -186,15 +192,15 @@ public:
 	}
 	float3 GetLightColor() const
 	{
-		return float3( 2, 2, 1.6 );
+		return float3( 8, 8, 6.4 );
 	}
 	void FindNearest( Ray& ray )
 	{
 		// room walls - ugly shortcut for more speed
 		float t;
-		if (ray.D.x < 0) PLANE_X( 3, 4 ) else PLANE_X( -2.99f, 5 );
-		if (ray.D.y < 0) PLANE_Y( 1, 6 ) else PLANE_Y( -2, 7 );
-		if (ray.D.z < 0) PLANE_Z( 3, 8 ) else PLANE_Z( -3.99f, 9 );
+		//if (ray.D.x < 0) PLANE_X( 3, 4 ) else PLANE_X( -2.99f, 5 );
+		//if (ray.D.y < 0) PLANE_Y( 1, 6 ) else PLANE_Y( -2, 7 );
+		//if (ray.D.z < 0) PLANE_Z( 3, 8 ) else PLANE_Z( -3.99f, 9 );
 
 		for (int i = 0; i < size(gameObjects); i++)
 		{
@@ -245,10 +251,10 @@ public:
 	}
 	__declspec(align(64)) // start a new cacheline here
 	float animTime = 0;
-	Primitive gameObjects[5];
+	Primitive gameObjects[10];
 	Material materials[8];
-	BVHNode bvhNode[5];
-	uint gameObjectsIdx[5];
+	BVHNode bvhNode[10];
+	uint gameObjectsIdx[10];
 	uint rootNodeIdx = 0, nodesUsed = 1;
 };
 

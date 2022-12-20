@@ -33,6 +33,9 @@
     <ClInclude Include="ray.h">
       <Filter>template</Filter>
     </ClInclude>
+    <ClInclude Include="bvh.h">
+      <Filter>template</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

@@ -76,9 +76,9 @@ namespace Tmpl8 {
 		{
 			AABB aabb;
 			Tri& tri = p.tri;
-			aabb.grow(tri.vertex0);
-			aabb.grow(tri.vertex1);
-			aabb.grow(tri.vertex2);
+			aabb.grow(TransformPosition(tri.vertex0, p.T));
+			aabb.grow(TransformPosition(tri.vertex1, p.T));
+			aabb.grow(TransformPosition(tri.vertex2, p.T));
 
 			return aabb;
 		}
@@ -87,8 +87,10 @@ namespace Tmpl8 {
 		{
 			AABB aabb;
 			Tri& tri = p.tri;
-			float3 min = tri.vertex0 - float3(tri.vertex1.x);
-			float3 max = tri.vertex0 + float3(tri.vertex1.x);
+			float3 pos = TransformPosition(float3(0), p.T);
+			float r = tri.vertex0.x;
+			float3 min = pos - float3(r);
+			float3 max = pos + float3(r);
 			aabb.grow(min);
 			aabb.grow(max);
 
@@ -131,8 +133,11 @@ namespace Tmpl8 {
 		static inline void IntersectTriangle(Primitive& p, Ray& ray)
 		{
 			Tri& tri = p.tri;
-			float3 v0v1 = tri.vertex1 - tri.vertex0;  //edge 0 
-			float3 v0v2 = tri.vertex2 - tri.vertex0;  //edge 1 
+			float3 v0 = TransformPosition(tri.vertex0, p.T);
+			float3 v1 = TransformPosition(tri.vertex1, p.T);
+			float3 v2 = TransformPosition(tri.vertex2, p.T);
+			float3 v0v1 = v1 - v0;  //edge 0 
+			float3 v0v2 = v2 - v0;  //edge 1 
 			float3 pvec = cross(ray.D, v0v2);
 			float det = dot(v0v1, pvec);
 
@@ -141,7 +146,7 @@ namespace Tmpl8 {
 
 			float invDet = 1 / det;
 
-			float3 tvec = ray.O - tri.vertex0;
+			float3 tvec = ray.O - v0;
 			float u = dot(tvec, pvec) * invDet;
 			if (u < 0 || u > 1) return;
 
