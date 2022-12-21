@@ -53,7 +53,7 @@ public:
 			mat4 T = mat4::Translate(float3(
 				RandomFloat() * 10 - 5, RandomFloat() * 3, RandomFloat() * 10 - 5
 			));
-			gameObjects[i] = PrimitiveFactory::GenerateSphere(i, 5, 0.2f, T);
+			gameObjects[i] = PrimitiveFactory::GenerateSphere(i, 2, 0.2f, T);
 		}
 		/*gameObjects[9] = PrimitiveFactory::GenerateTriangle(3, 5,
 			float3(-0.5f, -0.5f, 0), float3(0, 0.5f, 0), float3(0.5, -0.5f, 0)
@@ -248,6 +248,7 @@ public:
 		}
 		else
 		{
+			if (node.leftNode == 0) return;
 			IntersectBVH(ray, node.leftNode);
 			IntersectBVH(ray, node.leftNode + 1);
 		}

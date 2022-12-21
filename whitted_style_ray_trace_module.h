@@ -17,6 +17,8 @@ public:
 		Material material = scene.GetMaterial(ray.objIdx);
 		float3 albedo = scene.GetAlbedo(ray.objIdx, I); // very bad
 
+		return albedo;
+
 		/* visualize normal */ // return (N + 1) * 0.5f;
 		/* visualize distance */ // return 0.1f * float3( ray.t, ray.t, ray.t );
 
