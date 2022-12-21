@@ -45,8 +45,10 @@ public:
 		gameObjects[6] = PrimitiveFactory::GenerateQuad(6, 5, 20, mat4::Translate(0, 4, 0)); // roof
 		gameObjects[7] = PrimitiveFactory::GenerateQuad(7, 5, 20, mat4::Translate(0, 0, -7) * mat4::RotateX(PI / 2)); // back wall
 		gameObjects[8] = PrimitiveFactory::GenerateQuad(8, 5, 20, mat4::Translate(0, 0, 7) * mat4::RotateX(-PI / 2)); // front wall
-
-		for (int i = 9; i < 9 + 50; i++)
+		gameObjects[10] = PrimitiveFactory::GenerateTriangle(9, 5,
+			float3(-0.5f, -0.5f, 0), float3(0, 0.5f, 0), float3(0.5, -0.5f, 0)
+		);
+		for (int i = 10; i < 10 + 50; i++)
 		{
 			mat4 T = mat4::Translate(float3(
 				RandomFloat() * 10 - 5, RandomFloat() * 3, RandomFloat() * 10 - 5
@@ -113,6 +115,7 @@ public:
 		UpdateNodeBounds(rootNodeIdx);
 		// subdivide recursively
 		Subdivide(rootNodeIdx);
+		
 	}
 
 	void Subdivide(uint nodeIdx)
@@ -178,7 +181,7 @@ public:
 		int leftCount = 0, rightCount = 0;
 		for (uint i = 0; i < node.primCount; i++)
 		{
-			Primitive& primitive = gameObjects[gameObjectsIdx[node.leftNode + i]];
+			Primitive& primitive = gameObjects[gameObjectsIdx[node.firstPrimIdx + i]];
 			float3 candidatePos = TransformPosition(float3(0), primitive.T);
 			if (candidatePos.cell[axis] < pos)
 			{
@@ -289,10 +292,11 @@ public:
 	bool IsOccluded( Ray& ray )
 	{
 		float rayLength = ray.t;
-		for (int i = 0; i < size(gameObjects); i++)
+		/*for (int i = 0; i < size(gameObjects); i++)
 		{
 			PrimitiveUtils::Intersect(gameObjects[i], ray);
-		}
+		}*/
+		IntersectBVH(ray, rootNodeIdx);
 		return ray.t < rayLength;
 		// technically this is wasteful: 
 		// - we potentially search beyond rayLength
@@ -330,10 +334,10 @@ public:
 	}
 	__declspec(align(64)) // start a new cacheline here
 	float animTime = 0;
-	Primitive gameObjects[59];
+	Primitive gameObjects[60];
 	Material materials[8];
-	BVHNode bvhNode[59];
-	uint gameObjectsIdx[59];
+	BVHNode bvhNode[60 * 2 -1];
+	uint gameObjectsIdx[60];
 	uint rootNodeIdx = 0, nodesUsed = 1;
 };
 
