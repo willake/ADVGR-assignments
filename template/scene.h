@@ -245,11 +245,13 @@ public:
 	bool IsOccluded(Ray& ray)
 	{
 		float rayLength = ray.t;
+		
 		/*
 		for (int i = 0; i < size(gameObjects); i++)
 		{
 			PrimitiveUtils::Intersect(gameObjects[i], ray);
 		}*/
+		
 		IntersectBVH(ray, rootNodeIdx, true);
 		return ray.t < rayLength;
 	}
