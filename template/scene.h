@@ -38,20 +38,23 @@ public:
 		// we store all primitives in one continuous buffer
 		gameObjects[0] = PrimitiveFactory::GenerateQuad(0, 1, 1); // 0: light source
 		gameObjects[1] = PrimitiveFactory::GenerateSphere(1, 3, 0.5f); // 1: bouncing ball
-		gameObjects[2] = PrimitiveFactory::GenerateCube(2, 4, float3(0), float3(1.15f)); // 3: cube
+		gameObjects[2] = PrimitiveFactory::GenerateSphere(2, 3, 1);
+		//gameObjects[2] = PrimitiveFactory::GenerateCube(2, 4, float3(0), float3(1.15f)); // 3: cube
 		gameObjects[3] = PrimitiveFactory::GenerateQuad(3, 5, 20, mat4::Translate(-7, 0, 1) * mat4::RotateZ(PI / 2)); // left wall
 		gameObjects[4] = PrimitiveFactory::GenerateQuad(4, 5, 20, mat4::Translate(7, 0, 0) * mat4::RotateZ(-PI / 2)); // right wall
 		gameObjects[5] = PrimitiveFactory::GenerateQuad(5, 6, 20, mat4::Translate(0, -1, 0)); // floor
 		gameObjects[6] = PrimitiveFactory::GenerateQuad(6, 5, 20, mat4::Translate(0, 4, 0)); // roof
 		gameObjects[7] = PrimitiveFactory::GenerateQuad(7, 5, 20, mat4::Translate(0, 0, -7) * mat4::RotateX(PI / 2)); // back wall
 		gameObjects[8] = PrimitiveFactory::GenerateQuad(8, 5, 20, mat4::Translate(0, 0, 7) * mat4::RotateX(-PI / 2)); // front wall
-
-		for (int i = 9; i < 9 + 50; i++)
+		gameObjects[10] = PrimitiveFactory::GenerateTriangle(9, 5,
+			float3(-0.5f, -0.5f, 0), float3(0, 0.5f, 0), float3(0.5, -0.5f, 0)
+		);
+		for (int i = 10; i < 10 + 50; i++)
 		{
 			mat4 T = mat4::Translate(float3(
 				RandomFloat() * 10 - 5, RandomFloat() * 3, RandomFloat() * 10 - 5
 			));
-			gameObjects[i] = PrimitiveFactory::GenerateSphere(i, 5, 0.2f, T);
+			gameObjects[i] = PrimitiveFactory::GenerateSphere(i, 2, 0.2f, T);
 		}
 		/*gameObjects[9] = PrimitiveFactory::GenerateTriangle(3, 5,
 			float3(-0.5f, -0.5f, 0), float3(0, 0.5f, 0), float3(0.5, -0.5f, 0)
@@ -95,8 +98,9 @@ public:
 		mat4 M1 = M1base * mat4::RotateZ( sinf( animTime * 0.6f ) * 0.1f ) * mat4::Translate( float3( 0, -0.9, 0 ) );
 		gameObjects[0].T = M1, gameObjects[0].invT = M1.FastInvertedTransformNoScale();
 		// cube animation: spin
-		mat4 M2base = mat4::RotateX( PI / 4 ) * mat4::RotateZ( PI / 4 );
-		mat4 M2 = mat4::Translate( float3( 1.4f, 0, 2 ) ) * mat4::RotateY( animTime * 0.5f ) * M2base;
+		//mat4 M2base = mat4::RotateX( PI / 4 ) * mat4::RotateZ( PI / 4 );
+		//mat4 M2 = mat4::Translate( float3( 1.4f, 0, 2 ) ) * mat4::RotateY( animTime * 0.5f ) * M2base;
+		mat4 M2 = mat4::Translate(float3(1.4f, 0, 2));
 		gameObjects[2].T = M2, gameObjects[2].invT = M2.FastInvertedTransformNoScale();
 		// sphere animation: bounce
 		float tm = 1 - sqrf( fmodf( animTime, 2.0f ) - 1 );
@@ -107,17 +111,13 @@ public:
 
 	void BuildBVH()
 	{
-		
-		//for (int i = 0; i < N; i++) tri[i].centroid =
-		//	(tri[i].vertex0 + tri[i].vertex1 + tri[i].vertex2) * 0.3333f;
-		// assign all triangles to root node
-		
 		BVHNode& root = bvhNode[rootNodeIdx];
 		root.leftNode = 0;
 		root.firstPrimIdx = 0, root.primCount = size(gameObjects);
 		UpdateNodeBounds(rootNodeIdx);
 		// subdivide recursively
 		Subdivide(rootNodeIdx);
+		
 	}
 
 	void Subdivide(uint nodeIdx)
@@ -125,12 +125,27 @@ public:
 		// terminate recursion
 		BVHNode& node = bvhNode[nodeIdx];
 		if (node.primCount <= 2) return;
-		// determine split axis and position
-		float3 extent = node.aabbMax - node.aabbMin;
-		int axis = 0;
-		if (extent.y > extent.x) axis = 1;
-		if (extent.z > extent[axis]) axis = 2;
-		float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
+
+		// determine split axis using SAH
+		int bestAxis = -1;
+		float bestPos = 0, bestCost = 1e30f;
+		for (int axis = 0; axis < 3; axis++) for (uint i = 0; i < node.primCount; i++)
+		{
+			Primitive& primitive = gameObjects[gameObjectsIdx[node.firstPrimIdx + i]];
+			float candidatePos = TransformPosition(float3(0), primitive.T).cell[axis];
+			float cost = EvaluateSAH(node, axis, candidatePos);
+			if (cost < bestCost)
+				bestPos = candidatePos, bestAxis = axis, bestCost = cost;
+		}
+
+		float3 e = node.aabbMax - node.aabbMin; // extent of parent
+		float parentArea = e.x * e.y + e.y * e.z + e.z * e.x;
+		float parentCost = node.primCount * parentArea;
+
+		if (bestCost >= parentCost) return;
+
+		int axis = bestAxis;
+		float splitPos = bestPos;
 		// in-place partition
 		int i = node.firstPrimIdx;
 		int j = i + node.primCount - 1;
@@ -161,6 +176,34 @@ public:
 		Subdivide(rightChildIdx);
 	}
 
+	float EvaluateSAH(BVHNode& node, int axis, float pos)
+	{
+		// determine triangle counts and bounds for this split candidate
+		AABB leftBox, rightBox;
+		int leftCount = 0, rightCount = 0;
+		for (uint i = 0; i < node.primCount; i++)
+		{
+			Primitive& primitive = gameObjects[gameObjectsIdx[node.firstPrimIdx + i]];
+			float3 candidatePos = TransformPosition(float3(0), primitive.T);
+			if (candidatePos.cell[axis] < pos)
+			{
+				leftCount++;
+				AABB bounds = PrimitiveUtils::GetBounds(primitive);
+				leftBox.grow(bounds.bmin);
+				leftBox.grow(bounds.bmax);
+			}
+			else
+			{
+				rightCount++;
+				AABB bounds = PrimitiveUtils::GetBounds(primitive);
+				rightBox.grow(bounds.bmin);
+				rightBox.grow(bounds.bmax);
+			}
+		}
+		float cost = leftCount * leftBox.area() + rightCount * rightBox.area();
+		return cost > 0 ? cost : 1e30f;
+	}
+
 	void UpdateNodeBounds(uint nodeIdx)
 	{
 		BVHNode& node = bvhNode[nodeIdx];
@@ -185,12 +228,27 @@ public:
 		//if (ray.D.z < 0) PLANE_Z( 3, 8 ) else PLANE_Z( -3.99f, 9 );
 
 		
-		for (int i = 0; i < size(gameObjects); i++)
+		/*for (int i = 0; i < size(gameObjects); i++)
 		{
 			PrimitiveUtils::Intersect(gameObjects[i], ray);
-		}
+		}*/
 
-		//IntersectBVH(ray, rootNodeIdx);
+		IntersectBVH(ray, rootNodeIdx);
+	}
+
+	bool IsOccluded(Ray& ray)
+	{
+		float rayLength = ray.t;
+		/*for (int i = 0; i < size(gameObjects); i++)
+		{
+			PrimitiveUtils::Intersect(gameObjects[i], ray);
+		}*/
+		IntersectBVH(ray, rootNodeIdx);
+		return ray.t < rayLength;
+		// technically this is wasteful: 
+		// - we potentially search beyond rayLength
+		// - we store objIdx and t when we just need a yes/no
+		// - we don't 'early out' after the first occlusion
 	}
 
 	void IntersectBVH(Ray& ray, const uint nodeIdx)
@@ -207,6 +265,7 @@ public:
 		}
 		else
 		{
+			if (node.leftNode == 0) return;
 			IntersectBVH(ray, node.leftNode);
 			IntersectBVH(ray, node.leftNode + 1);
 		}
@@ -248,19 +307,6 @@ public:
 		return float3( 8, 8, 6.4 );
 	}
 
-	bool IsOccluded( Ray& ray )
-	{
-		float rayLength = ray.t;
-		for (int i = 0; i < size(gameObjects); i++)
-		{
-			PrimitiveUtils::Intersect(gameObjects[i], ray);
-		}
-		return ray.t < rayLength;
-		// technically this is wasteful: 
-		// - we potentially search beyond rayLength
-		// - we store objIdx and t when we just need a yes/no
-		// - we don't 'early out' after the first occlusion
-	}
 	float3 GetNormal( int objIdx, float3 I, float3 wo )
 	{
 		// we get the normal after finding the nearest intersection:
@@ -292,10 +338,10 @@ public:
 	}
 	__declspec(align(64)) // start a new cacheline here
 	float animTime = 0;
-	Primitive gameObjects[59];
+	Primitive gameObjects[60];
 	Material materials[8];
-	BVHNode bvhNode[59];
-	uint gameObjectsIdx[59];
+	BVHNode bvhNode[60 * 2 -1];
+	uint gameObjectsIdx[60];
 	uint rootNodeIdx = 0, nodesUsed = 1;
 };
 
