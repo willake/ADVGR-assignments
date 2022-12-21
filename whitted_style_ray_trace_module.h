@@ -19,7 +19,7 @@ public:
 
 		/* visualize normal */ // return (N + 1) * 0.5f;
 		/* visualize distance */ // return 0.1f * float3( ray.t, ray.t, ray.t );
-
+		//return albedo;
 		/* refraction of glass: 1.52 */
 		float n1 = 1;
 		float n2 = 1.52f;

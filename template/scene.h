@@ -46,15 +46,20 @@ public:
 		gameObjects[6] = PrimitiveFactory::GenerateQuad(6, 5, 20, mat4::Translate(0, 4, 0)); // roof
 		gameObjects[7] = PrimitiveFactory::GenerateQuad(7, 5, 20, mat4::Translate(0, 0, -7) * mat4::RotateX(PI / 2)); // back wall
 		gameObjects[8] = PrimitiveFactory::GenerateQuad(8, 5, 20, mat4::Translate(0, 0, 7) * mat4::RotateX(-PI / 2)); // front wall
-		gameObjects[9] = PrimitiveFactory::GenerateTriangle(9, 5,
-			float3(-0.5f, -0.5f, 0), float3(0, 0.5f, 0), float3(0.5, -0.5f, 0)
-		);
-		for (int i = 10; i < 10 + 50; i++)
+		for (int i = 9; i < 9 + 20; i++)
+		{
+			mat4 T = mat4::Translate(float3(
+				RandomFloat() * 10 - 5, RandomFloat() * 3, RandomFloat() * 10 - 5
+			)) * mat4::RotateX(RandomFloat() * PI) * mat4::RotateY(RandomFloat() * PI) * mat4::RotateZ(RandomFloat() * PI);
+			gameObjects[i] = PrimitiveFactory::GenerateTriangle(i, 2, float3(-0.2f, -0.2f, 0), float3(0, 0.2f, 0), float3(0.5, -0.2f, 0), T);
+		}
+		for (int i = 29; i < 29 + 10; i++)
 		{
 			mat4 T = mat4::Translate(float3(
 				RandomFloat() * 10 - 5, RandomFloat() * 3, RandomFloat() * 10 - 5
 			));
-			gameObjects[i] = PrimitiveFactory::GenerateSphere(i, 2, 0.2f, T);
+			int matIdx = 8 + (int)floor(RandomFloat() * 3.99);
+			gameObjects[i] = PrimitiveFactory::GenerateSphere(i, matIdx, 0.2f, T);
 		}
 		SetTime( 0 );
 		// error material
@@ -77,6 +82,14 @@ public:
 		materials[6].reflectivity = 0.3f;
 		// back wall material
 		materials[7].solverId = 2;
+		// white material
+		materials[8].color = float3(255 / 255.0f, 212 / 255.0f, 178 / 255.0f);
+		// white material
+		materials[9].color = float3(255 / 255.0f, 246 / 255.0f, 189 / 255.0f);
+		// white material
+		materials[10].color = float3(206 / 255.0f, 237 / 255.0f, 199 / 255.0f);
+		// white material
+		materials[11].color = float3(134 / 255.0f, 200 / 255.0f, 188 / 255.0f);
 		// Note: once we have triangle support we should get rid of the class
 		// hierarchy: virtuals reduce performance somewhat.
 
@@ -220,22 +233,24 @@ public:
 	{
 		float t;
 		
+		/*
 		for (int i = 0; i < size(gameObjects); i++)
 		{
 			PrimitiveUtils::Intersect(gameObjects[i], ray);
-		}
+		}*/
 
-		//IntersectBVH(ray, rootNodeIdx);
+		IntersectBVH(ray, rootNodeIdx);
 	}
 
 	bool IsOccluded(Ray& ray)
 	{
 		float rayLength = ray.t;
+		/*
 		for (int i = 0; i < size(gameObjects); i++)
 		{
 			PrimitiveUtils::Intersect(gameObjects[i], ray);
-		}
-		//IntersectBVH(ray, rootNodeIdx, false);
+		}*/
+		IntersectBVH(ray, rootNodeIdx, true);
 		return ray.t < rayLength;
 	}
 
@@ -298,7 +313,7 @@ public:
 
 	float3 GetLightColor() const
 	{
-		return float3( 8, 8, 6.4 );
+		return float3( 16, 16, 12.4 );
 	}
 
 	float3 GetNormal( int objIdx, float3 I, float3 wo )
@@ -332,10 +347,10 @@ public:
 	}
 	__declspec(align(64)) // start a new cacheline here
 	float animTime = 0;
-	Primitive gameObjects[60];
-	Material materials[8];
-	BVHNode bvhNode[60 * 2 -1];
-	uint gameObjectsIdx[60];
+	Primitive gameObjects[39];
+	Material materials[12];
+	BVHNode bvhNode[39 * 2 -1];
+	uint gameObjectsIdx[39];
 	uint rootNodeIdx = 0, nodesUsed = 1;
 };
 
