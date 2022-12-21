@@ -1,6 +1,6 @@
 # ADVGR2022 Assignment
 
-This is a assignment project for ADVGR2022 in Utrecht University. The project is built from the template made by the lecturer. Further information forward to [Reference](#Reference) section
+This is a assignment project for ADVGR2022 in Utrecht University. The project is built from the template made by the lecturer [Jacco Bikker](https://github.com/jbikker). Further information for the template is in [Reference](#Reference) section.
 
 ## Switch Between Whitted Style & Path Tracer:
 
