@@ -46,7 +46,7 @@ public:
 		gameObjects[6] = PrimitiveFactory::GenerateQuad(6, 5, 20, mat4::Translate(0, 4, 0)); // roof
 		gameObjects[7] = PrimitiveFactory::GenerateQuad(7, 5, 20, mat4::Translate(0, 0, -7) * mat4::RotateX(PI / 2)); // back wall
 		gameObjects[8] = PrimitiveFactory::GenerateQuad(8, 5, 20, mat4::Translate(0, 0, 7) * mat4::RotateX(-PI / 2)); // front wall
-		gameObjects[10] = PrimitiveFactory::GenerateTriangle(9, 5,
+		gameObjects[9] = PrimitiveFactory::GenerateTriangle(9, 5,
 			float3(-0.5f, -0.5f, 0), float3(0, 0.5f, 0), float3(0.5, -0.5f, 0)
 		);
 		for (int i = 10; i < 10 + 50; i++)
@@ -56,9 +56,6 @@ public:
 			));
 			gameObjects[i] = PrimitiveFactory::GenerateSphere(i, 2, 0.2f, T);
 		}
-		/*gameObjects[9] = PrimitiveFactory::GenerateTriangle(3, 5,
-			float3(-0.5f, -0.5f, 0), float3(0, 0.5f, 0), float3(0.5, -0.5f, 0)
-		); */
 		SetTime( 0 );
 		// error material
 		materials[0].color = float3(240 / 255.f, 98 / 255.f, 146 / 255.f);
@@ -221,12 +218,7 @@ public:
 
 	void FindNearest(Ray& ray)
 	{
-		// room walls - ugly shortcut for more speed
 		float t;
-		//if (ray.D.x < 0) PLANE_X( 3, 4 ) else PLANE_X( -2.99f, 5 );
-		//if (ray.D.y < 0) PLANE_Y( 1, 6 ) else PLANE_Y( -2, 7 );
-		//if (ray.D.z < 0) PLANE_Z( 3, 8 ) else PLANE_Z( -3.99f, 9 );
-
 		
 		for (int i = 0; i < size(gameObjects); i++)
 		{
@@ -245,10 +237,6 @@ public:
 		}
 		//IntersectBVH(ray, rootNodeIdx, false);
 		return ray.t < rayLength;
-		// technically this is wasteful: 
-		// - we potentially search beyond rayLength
-		// - we store objIdx and t when we just need a yes/no
-		// - we don't 'early out' after the first occlusion
 	}
 
 	void IntersectBVH(Ray& ray, const uint nodeIdx, bool shadowRay = false)
