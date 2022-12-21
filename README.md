@@ -28,10 +28,11 @@ Holde Right Mouse for aiming
 In the presented scene, there are 1 light source, 2 specular sphere, 5 quad walls, 1 half-specular quad ground, 20 triangles in arbitrary position & location, and 10 diffuse sphere in arbitrary position. The renderer is whitted style ray tracer.
 
 ### Without BVH
-Without BVH, frame rate stands at 1.1 ~ 1.5 fps. When the camera looks at a corner, the frame rate remains the same.
+Without BVH, frame rate stands at 1.1 ~ 1.5 fps. When the camera looks at a corner, the frame rate remains the same. When the camera moves outside the room, there is a small increase of frame rate.
 
 ![without-bvh-front](readme_assets/without-bvh-front.png)
 ![without-bvh-corner](readme_assets/without-bvh-corner.png)
+![without-bvh-outside](readme_assets/without-bvh-outside.png)
 
 ### With BVH
 Without BVH, frame rate increase to 4.6 ~ 4.8 fps. When the camera looks at a corner, the frame rate grows to 7.1 ~ 7.9 fps, which is almost doubled. Next, I moved the camera to outside the room, the frame rate grows sharply to 20 ~ 21 fps. Which is definitely benefit from BVH.
