@@ -228,22 +228,22 @@ public:
 		//if (ray.D.z < 0) PLANE_Z( 3, 8 ) else PLANE_Z( -3.99f, 9 );
 
 		
-		/*for (int i = 0; i < size(gameObjects); i++)
+		for (int i = 0; i < size(gameObjects); i++)
 		{
 			PrimitiveUtils::Intersect(gameObjects[i], ray);
-		}*/
+		}
 
-		IntersectBVH(ray, rootNodeIdx);
+		//IntersectBVH(ray, rootNodeIdx);
 	}
 
 	bool IsOccluded(Ray& ray)
 	{
 		float rayLength = ray.t;
-		/*for (int i = 0; i < size(gameObjects); i++)
+		for (int i = 0; i < size(gameObjects); i++)
 		{
 			PrimitiveUtils::Intersect(gameObjects[i], ray);
-		}*/
-		IntersectBVH(ray, rootNodeIdx);
+		}
+		//IntersectBVH(ray, rootNodeIdx, false);
 		return ray.t < rayLength;
 		// technically this is wasteful: 
 		// - we potentially search beyond rayLength
@@ -251,12 +251,18 @@ public:
 		// - we don't 'early out' after the first occlusion
 	}
 
-	void IntersectBVH(Ray& ray, const uint nodeIdx)
+	void IntersectBVH(Ray& ray, const uint nodeIdx, bool shadowRay = false)
 	{
 		BVHNode& node = bvhNode[nodeIdx];
 		if (!IntersectAABB(ray, node.aabbMin, node.aabbMax)) return;
 		if (node.primCount > 0)
 		{
+			if (shadowRay) 
+			{
+				ray.t = 0;  
+				return;
+			}
+
 			for (uint i = 0; i < node.primCount; i++)
 			{
 				Primitive& p = gameObjects[gameObjectsIdx[node.firstPrimIdx + i]];
