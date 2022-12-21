@@ -107,11 +107,6 @@ public:
 
 	void BuildBVH()
 	{
-		
-		//for (int i = 0; i < N; i++) tri[i].centroid =
-		//	(tri[i].vertex0 + tri[i].vertex1 + tri[i].vertex2) * 0.3333f;
-		// assign all triangles to root node
-		
 		BVHNode& root = bvhNode[rootNodeIdx];
 		root.leftNode = 0;
 		root.firstPrimIdx = 0, root.primCount = size(gameObjects);
@@ -125,12 +120,27 @@ public:
 		// terminate recursion
 		BVHNode& node = bvhNode[nodeIdx];
 		if (node.primCount <= 2) return;
-		// determine split axis and position
-		float3 extent = node.aabbMax - node.aabbMin;
-		int axis = 0;
-		if (extent.y > extent.x) axis = 1;
-		if (extent.z > extent[axis]) axis = 2;
-		float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
+
+		// determine split axis using SAH
+		int bestAxis = -1;
+		float bestPos = 0, bestCost = 1e30f;
+		for (int axis = 0; axis < 3; axis++) for (uint i = 0; i < node.primCount; i++)
+		{
+			Primitive& primitive = gameObjects[gameObjectsIdx[node.leftNode + i]];
+			float candidatePos = TransformPosition(float3(0), primitive.T).cell[axis];
+			float cost = EvaluateSAH(node, axis, candidatePos);
+			if (cost < bestCost)
+				bestPos = candidatePos, bestAxis = axis, bestCost = cost;
+		}
+
+		float3 e = node.aabbMax - node.aabbMin; // extent of parent
+		float parentArea = e.x * e.y + e.y * e.z + e.z * e.x;
+		float parentCost = node.primCount * parentArea;
+
+		if (bestCost >= parentCost) return;
+
+		int axis = bestAxis;
+		float splitPos = bestPos;
 		// in-place partition
 		int i = node.firstPrimIdx;
 		int j = i + node.primCount - 1;
@@ -161,6 +171,34 @@ public:
 		Subdivide(rightChildIdx);
 	}
 
+	float EvaluateSAH(BVHNode& node, int axis, float pos)
+	{
+		// determine triangle counts and bounds for this split candidate
+		AABB leftBox, rightBox;
+		int leftCount = 0, rightCount = 0;
+		for (uint i = 0; i < node.primCount; i++)
+		{
+			Primitive& primitive = gameObjects[gameObjectsIdx[node.leftNode + i]];
+			float3 candidatePos = TransformPosition(float3(0), primitive.T);
+			if (candidatePos.cell[axis] < pos)
+			{
+				leftCount++;
+				AABB bounds = PrimitiveUtils::GetBounds(primitive);
+				leftBox.grow(bounds.bmin);
+				leftBox.grow(bounds.bmax);
+			}
+			else
+			{
+				rightCount++;
+				AABB bounds = PrimitiveUtils::GetBounds(primitive);
+				rightBox.grow(bounds.bmin);
+				rightBox.grow(bounds.bmax);
+			}
+		}
+		float cost = leftCount * leftBox.area() + rightCount * rightBox.area();
+		return cost > 0 ? cost : 1e30f;
+	}
+
 	void UpdateNodeBounds(uint nodeIdx)
 	{
 		BVHNode& node = bvhNode[nodeIdx];
@@ -184,13 +222,13 @@ public:
 		//if (ray.D.y < 0) PLANE_Y( 1, 6 ) else PLANE_Y( -2, 7 );
 		//if (ray.D.z < 0) PLANE_Z( 3, 8 ) else PLANE_Z( -3.99f, 9 );
 
-		
+		/*
 		for (int i = 0; i < size(gameObjects); i++)
 		{
 			PrimitiveUtils::Intersect(gameObjects[i], ray);
-		}
+		}*/
 
-		//IntersectBVH(ray, rootNodeIdx);
+		IntersectBVH(ray, rootNodeIdx);
 	}
 
 	void IntersectBVH(Ray& ray, const uint nodeIdx)
